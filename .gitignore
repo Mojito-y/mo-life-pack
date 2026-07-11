@@ -7,6 +7,6 @@ coverage/
 .env
 .env.local
 coach.config.json
+lark-agent-bridge.config.json
 *.log
 /.codex-local/
-

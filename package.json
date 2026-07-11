@@ -4,12 +4,19 @@
   "version": "0.1.0",
   "type": "module",
   "packageManager": "pnpm@9.0.0",
+  "dependencies": {
+    "lark-channel-bridge": "^0.5.7"
+  },
   "scripts": {
     "setup": "node packages/setup-cli/src/index.js setup",
     "doctor": "node packages/setup-cli/src/index.js doctor",
     "install:skill": "node scripts/install-skill.js",
+    "bridge:install": "node packages/setup-cli/src/index.js bridge-install",
+    "bridge:doctor": "node packages/setup-cli/src/index.js bridge-doctor",
+    "bridge:run": "node packages/setup-cli/src/index.js bridge-run",
+    "bridge:start": "node packages/setup-cli/src/index.js bridge-start",
+    "bridge:status": "node packages/setup-cli/src/index.js bridge-status",
     "dev:lark": "node apps/lark-bot/src/index.js",
     "plan:coach": "node packages/mo-coach-core/src/plan.js"
   }
 }
-

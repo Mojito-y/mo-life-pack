@@ -49,6 +49,18 @@ ensure_pnpm() {
   exit 1
 }
 
+warn_node_runtime() {
+  if ! need_command node; then
+    return
+  fi
+
+  local major
+  major="$(node -p 'Number(process.versions.node.split(".")[0])' 2>/dev/null || printf '0')"
+  if [ "$major" -lt 22 ]; then
+    say "提示：当前 Node.js 版本低于 22。Mo Life Pack 可以安装，但 lark-channel-bridge 运行建议使用当前 Node.js LTS。"
+  fi
+}
+
 run_pnpm() {
   COREPACK_ENABLE_PROJECT_SPEC=0 pnpm --config.manage-package-manager-versions=false --config.package-manager-strict=false "$@"
 }
@@ -77,6 +89,7 @@ main() {
   cd "$INSTALL_DIR"
 
   ensure_pnpm
+  warn_node_runtime
 
   say "正在安装依赖..."
   run_pnpm install
@@ -88,8 +101,13 @@ main() {
     MO_LIFE_PACK_ASSUME_DEFAULTS=1 run_pnpm run setup
   fi
 
+  if [ "${MO_LIFE_PACK_SKIP_BRIDGE_INSTALL:-}" != "1" ]; then
+    say "正在安装飞书机器人 bridge..."
+    run_pnpm run bridge:install
+  fi
+
   say "安装完成。以后可以进入目录继续使用："
-  say "cd \"$INSTALL_DIR\" && pnpm run doctor"
+  say "cd \"$INSTALL_DIR\" && pnpm run bridge:run"
 }
 
 main "$@"

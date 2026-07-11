@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "bridgeName": "lark-channel-bridge",
+  "bridgePackage": "lark-channel-bridge",
+  "bridgeCommand": "./node_modules/.bin/lark-channel-bridge",
+  "profile": "mo-coach",
+  "agent": "codex",
+  "workspace": ".",
+  "installCommand": "pnpm install",
+  "firstRunArgs": ["run", "--profile", "mo-coach", "--agent", "codex", "--workspace", "."],
+  "serviceArgs": ["start", "--profile", "mo-coach", "--agent", "codex", "--workspace", "."],
+  "statusArgs": ["status", "--profile", "mo-coach"],
+  "agentPrompt": "Use $mo-coach to answer fitness check-ins and update training plans."
+}
