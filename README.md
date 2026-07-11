@@ -32,12 +32,19 @@ cd ~/mo-life-pack
 npm run bridge:run
 ```
 
-第一次运行会显示二维码。用飞书 / Lark 扫码后，按向导创建或绑定 PersonalAgent。这个 profile 会使用：
+`bridge:run` 是前台模式，适合第一次扫码绑定和调试。第一次运行会显示二维码。用飞书 / Lark 扫码后，按向导创建或绑定 PersonalAgent。这个 profile 会使用：
 
 ```text
 profile: mo-coach
 agent: codex
 workspace: ~/mo-life-pack
+```
+
+确认飞书里能正常和 bot 收发消息后，可以按 `Ctrl-C` 停掉前台进程，再切到后台常驻：
+
+```bash
+npm run bridge:start
+npm run bridge:status
 ```
 
 ## 常用命令
@@ -70,6 +77,12 @@ npm run bridge:start
 
 ```bash
 npm run bridge:status
+```
+
+停止后台服务：
+
+```bash
+npm run bridge:stop
 ```
 
 ## Mo Coach 能做什么
@@ -114,6 +127,30 @@ workspace: 当前安装目录
 ```text
 LARK_CHANNEL_BRIDGE_COMMAND=/your/path/lark-channel-bridge
 ```
+
+如果 bridge 报 `未找到本地 Codex CLI`，macOS Codex App 常见路径是：
+
+```text
+/Applications/Codex.app/Contents/Resources/codex
+```
+
+安装向导会自动检测这个路径；如果你的 Codex CLI 在别的位置，可以在 `.env.local` 写：
+
+```text
+LARK_CHANNEL_CODEX_BIN=/your/path/codex
+```
+
+## 安装卡住排查
+
+如果一条命令长时间没有进展，通常卡在访问 GitHub，而不是 Mo Life Pack 本身。可以先单独运行：
+
+```bash
+git ls-remote https://github.com/Mojito-y/mo-life-pack.git HEAD
+```
+
+如果这条命令也卡住或报 `443`，请先切换网络 / 代理 / VPN 后重新执行安装命令。
+
+安装脚本也会在 `git clone` 前做这项检查，并明确提示卡住的位置。
 
 ## 静默默认安装
 

@@ -34,6 +34,25 @@ ensure_npm() {
   exit 1
 }
 
+print_github_help() {
+  say "无法访问 GitHub 仓库：${REPO_URL}"
+  say "这通常是 GitHub 网络、代理或 443 连接问题，不是 Mo Life Pack 配置问题。"
+  say "你可以先单独运行下面这条命令确认网络："
+  say "git ls-remote ${REPO_URL} HEAD"
+  say "如果这里也卡住或报 443，请先切换网络 / 代理 / VPN 后重新运行安装命令。"
+}
+
+ensure_repo_reachable() {
+  say "正在检查 GitHub 仓库连接..."
+  if git ls-remote "${REPO_URL}" HEAD >/dev/null 2>&1; then
+    say "GitHub 仓库连接正常。"
+    return
+  fi
+
+  print_github_help
+  exit 1
+}
+
 warn_node_runtime() {
   if ! need_command node; then
     return
@@ -49,7 +68,10 @@ warn_node_runtime() {
 checkout_repo() {
   if [ -d "${INSTALL_DIR}/.git" ]; then
     say "发现已有目录：${INSTALL_DIR}，正在更新..."
-    git -C "${INSTALL_DIR}" pull --ff-only
+    if ! git -C "${INSTALL_DIR}" pull --ff-only; then
+      print_github_help
+      exit 1
+    fi
     return
   fi
 
@@ -59,8 +81,13 @@ checkout_repo() {
     exit 1
   fi
 
+  ensure_repo_reachable
   say "正在下载 Mo Life Pack 到：${INSTALL_DIR}"
-  git clone "${REPO_URL}" "${INSTALL_DIR}"
+  if ! git clone --progress "${REPO_URL}" "${INSTALL_DIR}"; then
+    print_github_help
+    exit 1
+  fi
+  say "Mo Life Pack 下载完成。"
 }
 
 main() {

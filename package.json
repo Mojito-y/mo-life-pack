@@ -20,6 +20,7 @@
     "bridge:run": "node packages/setup-cli/src/index.js bridge-run",
     "bridge:start": "node packages/setup-cli/src/index.js bridge-start",
     "bridge:status": "node packages/setup-cli/src/index.js bridge-status",
+    "bridge:stop": "node packages/setup-cli/src/index.js bridge-stop",
     "dev:lark": "node apps/lark-bot/src/index.js",
     "plan:coach": "node packages/mo-coach-core/src/plan.js"
   }

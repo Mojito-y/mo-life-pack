@@ -1,4 +1,5 @@
 import { readFile, writeFile, access } from "node:fs/promises";
+import { constants } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import process from "node:process";
@@ -13,10 +14,20 @@ const bridgeTemplatePath = path.join(repoRoot, "templates", "lark-agent-bridge.c
 const envTemplatePath = path.join(repoRoot, "templates", "env.example");
 const skillInstallScript = path.join(repoRoot, "scripts", "install-skill.js");
 const runnerCommand = "npm";
+const macCodexAppBinary = "/Applications/Codex.app/Contents/Resources/codex";
 
 async function exists(filePath) {
   try {
     await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function executableExists(filePath) {
+  try {
+    await access(filePath, constants.X_OK);
     return true;
   } catch {
     return false;
@@ -69,12 +80,101 @@ async function loadEnvLocal() {
   return values;
 }
 
+async function detectCodexBinaryPath() {
+  if (process.env.LARK_CHANNEL_CODEX_BIN) {
+    return process.env.LARK_CHANNEL_CODEX_BIN;
+  }
+
+  const pathCodex = spawnSync("codex", ["--version"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    timeout: 5000
+  });
+  if (pathCodex.status === 0) {
+    return "";
+  }
+
+  if (await executableExists(macCodexAppBinary)) {
+    return macCodexAppBinary;
+  }
+
+  return "";
+}
+
+async function getCodexCliStatus() {
+  if (process.env.LARK_CHANNEL_CODEX_BIN) {
+    return {
+      ok: await executableExists(process.env.LARK_CHANNEL_CODEX_BIN),
+      label: process.env.LARK_CHANNEL_CODEX_BIN,
+      source: "LARK_CHANNEL_CODEX_BIN"
+    };
+  }
+
+  const pathCodex = spawnSync("codex", ["--version"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    timeout: 5000
+  });
+  if (pathCodex.status === 0) {
+    return { ok: true, label: "codex", source: "PATH" };
+  }
+
+  if (await executableExists(macCodexAppBinary)) {
+    return { ok: true, label: macCodexAppBinary, source: "macOS Codex App" };
+  }
+
+  return { ok: false, label: macCodexAppBinary, source: "macOS Codex App" };
+}
+
+function upsertBlankEnvValue(text, key, value) {
+  const lines = text.split(/\r?\n/);
+  let found = false;
+  const next = lines.map((line) => {
+    if (!line.startsWith(`${key}=`)) {
+      return line;
+    }
+
+    found = true;
+    const currentValue = line.slice(key.length + 1).trim();
+    return currentValue ? line : `${key}=${value}`;
+  });
+
+  if (!found) {
+    if (next.length && next[next.length - 1] !== "") {
+      next.push("");
+    }
+    next.push(`${key}=${value}`);
+  }
+
+  return next.join("\n").replace(/\n*$/, "\n");
+}
+
+async function ensureCodexBinaryHint() {
+  const codexPath = await detectCodexBinaryPath();
+  if (!codexPath) {
+    return "";
+  }
+
+  process.env.LARK_CHANNEL_CODEX_BIN = codexPath;
+  const envLocalPath = path.join(repoRoot, ".env.local");
+  if (await exists(envLocalPath)) {
+    const current = await readFile(envLocalPath, "utf8");
+    const values = parseEnv(current);
+    if (!values.LARK_CHANNEL_CODEX_BIN) {
+      await writeFile(envLocalPath, upsertBlankEnvValue(current, "LARK_CHANNEL_CODEX_BIN", codexPath));
+    }
+  }
+
+  return codexPath;
+}
+
 async function ensureEnvLocal() {
   const envLocalPath = path.join(repoRoot, ".env.local");
   const envTemplate = await readFile(envTemplatePath, "utf8");
 
   if (!(await exists(envLocalPath))) {
     await writeFile(envLocalPath, envTemplate);
+    await ensureCodexBinaryHint();
     return;
   }
 
@@ -89,6 +189,7 @@ async function ensureEnvLocal() {
     const suffix = `${current.endsWith("\n") ? "" : "\n"}\n# Mo Life Pack bridge settings\n${missingLines.join("\n")}\n`;
     await writeFile(envLocalPath, current + suffix);
   }
+  await ensureCodexBinaryHint();
 }
 
 async function setup() {
@@ -160,10 +261,13 @@ async function setup() {
     process.stdout.write(`Skill 安装可能需要处理权限。检查后可运行 ${runnerCommand} run install:skill。\n`);
   }
   process.stdout.write(`下一步：运行 ${runnerCommand} run bridge:run，扫码绑定飞书 PersonalAgent。\n`);
+  process.stdout.write(`确认能收发消息后，按 Ctrl-C 停掉前台进程，再运行 ${runnerCommand} run bridge:start 后台常驻。\n`);
   process.stdout.write(`Skill 安装脚本位置：${path.relative(repoRoot, skillInstallScript)}\n`);
 }
 
 async function doctor() {
+  await loadEnvLocal();
+  const codexCli = await getCodexCliStatus();
   const skillInstallTarget = path.join(process.env.HOME || "", ".codex", "skills", "mo-coach", "SKILL.md");
   const checks = [
     ["skill scaffold", await exists(path.join(repoRoot, "skills", "mo-coach", "SKILL.md"))],
@@ -180,6 +284,12 @@ async function doctor() {
   for (const [label, ok] of checks) {
     process.stdout.write(`${ok ? "OK" : "MISS"} ${label}\n`);
   }
+  if (codexCli.ok) {
+    process.stdout.write(`OK Codex CLI (${codexCli.source}): ${codexCli.label}\n`);
+  } else {
+    process.stdout.write(`WARN Codex CLI 未找到。macOS Codex App 常见路径：${macCodexAppBinary}\n`);
+    process.stdout.write("如果 Codex CLI 在其他位置，请在 .env.local 设置 LARK_CHANNEL_CODEX_BIN。\n");
+  }
 
   if (failures.length) {
     process.exitCode = 1;
@@ -188,6 +298,8 @@ async function doctor() {
 
 async function bridgeDoctor() {
   await loadEnvLocal();
+  const detectedCodexPath = await ensureCodexBinaryHint();
+  const codexCli = await getCodexCliStatus();
   const bridgeConfigExists = await exists(bridgeConfigPath);
   if (!bridgeConfigExists) {
     process.stdout.write("MISS lark-agent-bridge.config.json\n");
@@ -204,6 +316,13 @@ async function bridgeDoctor() {
   });
 
   process.stdout.write(`OK bridge config (${bridgeConfig.enabled ? "enabled" : "disabled"})\n`);
+  if (detectedCodexPath) {
+    process.stdout.write(`OK Codex CLI: ${detectedCodexPath}\n`);
+  } else if (codexCli.ok) {
+    process.stdout.write(`OK Codex CLI (${codexCli.source}): ${codexCli.label}\n`);
+  } else {
+    process.stdout.write(`WARN Codex CLI 未找到。可在 .env.local 设置 LARK_CHANNEL_CODEX_BIN=${macCodexAppBinary}\n`);
+  }
   if (result.status === 0) {
     process.stdout.write(`OK bridge command: ${bridgeCommand}\n`);
   } else if (result.error) {
@@ -242,6 +361,7 @@ function normalizeBridgeInstallCommand(command) {
 
 async function loadBridgeConfig() {
   await loadEnvLocal();
+  await ensureCodexBinaryHint();
   if (!(await exists(bridgeConfigPath))) {
     throw new Error(`缺少 lark-agent-bridge.config.json，请先运行 ${runnerCommand} run setup。`);
   }
@@ -284,13 +404,19 @@ async function runBridgeCommand(kind) {
   const argsByKind = {
     run: bridgeConfig.firstRunArgs,
     start: bridgeConfig.serviceArgs,
-    status: bridgeConfig.statusArgs
+    status: bridgeConfig.statusArgs,
+    stop: bridgeConfig.stopArgs || ["stop", "--profile", bridgeConfig.profile || "mo-coach"]
   };
   const args = materializeBridgeArgs(argsByKind[kind] || bridgeConfig.firstRunArgs);
   const result = spawnSync(bridgeCommand, args, {
     cwd: repoRoot,
     stdio: "inherit"
   });
+  if (kind === "run") {
+    process.stdout.write(`\nbridge:run 是前台绑定/调试模式；确认 bot 可用后，可以运行 ${runnerCommand} run bridge:start 后台常驻，再用 ${runnerCommand} run bridge:status 查看状态。\n`);
+  } else if (kind === "start" && (result.status ?? 1) === 0) {
+    process.stdout.write(`\n后台服务已启动。可以运行 ${runnerCommand} run bridge:status 查看状态。\n`);
+  }
   process.exitCode = result.status ?? 1;
 }
 
@@ -310,7 +436,9 @@ if (command === "setup") {
   await runBridgeCommand("start");
 } else if (command === "bridge-status") {
   await runBridgeCommand("status");
+} else if (command === "bridge-stop") {
+  await runBridgeCommand("stop");
 } else {
-  process.stdout.write("用法：node packages/setup-cli/src/index.js <setup|doctor|bridge-install|bridge-doctor|bridge-run|bridge-start|bridge-status>\n");
+  process.stdout.write("用法：node packages/setup-cli/src/index.js <setup|doctor|bridge-install|bridge-doctor|bridge-run|bridge-start|bridge-status|bridge-stop>\n");
   process.exitCode = 1;
 }

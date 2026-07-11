@@ -10,5 +10,6 @@
   "firstRunArgs": ["run", "--profile", "mo-coach", "--agent", "codex", "--workspace", "."],
   "serviceArgs": ["start", "--profile", "mo-coach", "--agent", "codex", "--workspace", "."],
   "statusArgs": ["status", "--profile", "mo-coach"],
+  "stopArgs": ["stop", "--profile", "mo-coach"],
   "agentPrompt": "Use $mo-coach to answer fitness check-ins and update training plans."
 }
