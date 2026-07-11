@@ -4,6 +4,7 @@ set -euo pipefail
 REPO_URL="${MO_LIFE_PACK_REPO_URL:-https://github.com/Mojito-y/mo-life-pack.git}"
 INSTALL_DIR="${MO_LIFE_PACK_DIR:-$HOME/mo-life-pack}"
 PNPM_VERSION="${MO_LIFE_PACK_PNPM_VERSION:-9.0.0}"
+PNPM_RUNNER="${MO_LIFE_PACK_PNPM_RUNNER:-}"
 
 say() {
   printf '\n%s\n' "$1"
@@ -27,19 +28,29 @@ ensure_git() {
 
 ensure_pnpm() {
   if need_command pnpm; then
+    PNPM_RUNNER="pnpm"
     return
   fi
 
   if need_command corepack; then
-    say "没有找到 pnpm，正在用 corepack 准备 pnpm ${PNPM_VERSION}..."
-    corepack enable
-    corepack prepare "pnpm@${PNPM_VERSION}" --activate
-    return
+    say "没有找到 pnpm，尝试用 corepack 临时运行 pnpm ${PNPM_VERSION}..."
+    if COREPACK_ENABLE_PROJECT_SPEC=0 corepack pnpm --version >/dev/null 2>&1; then
+      PNPM_RUNNER="corepack"
+      return
+    fi
+
+    if corepack prepare "pnpm@${PNPM_VERSION}" --activate >/dev/null 2>&1 &&
+      COREPACK_ENABLE_PROJECT_SPEC=0 corepack pnpm --version >/dev/null 2>&1; then
+      PNPM_RUNNER="corepack"
+      return
+    fi
+
+    say "corepack 无法临时准备 pnpm，将尝试用 npm exec 运行 pnpm。"
   fi
 
   if need_command npm; then
-    say "没有找到 pnpm，正在用 npm 安装 pnpm ${PNPM_VERSION}..."
-    npm install -g "pnpm@${PNPM_VERSION}"
+    say "没有找到 pnpm，使用 npm exec 临时运行 pnpm ${PNPM_VERSION}，不写入 /usr/local/bin。"
+    PNPM_RUNNER="npm-exec"
     return
   fi
 
@@ -62,31 +73,45 @@ warn_node_runtime() {
 }
 
 run_pnpm() {
-  COREPACK_ENABLE_PROJECT_SPEC=0 pnpm --config.manage-package-manager-versions=false --config.package-manager-strict=false "$@"
+  case "$PNPM_RUNNER" in
+    pnpm)
+      COREPACK_ENABLE_PROJECT_SPEC=0 pnpm --config.manage-package-manager-versions=false --config.package-manager-strict=false "$@"
+      ;;
+    corepack)
+      COREPACK_ENABLE_PROJECT_SPEC=0 corepack pnpm --config.manage-package-manager-versions=false --config.package-manager-strict=false "$@"
+      ;;
+    npm-exec)
+      npm exec --yes "pnpm@${PNPM_VERSION}" -- --config.manage-package-manager-versions=false --config.package-manager-strict=false "$@"
+      ;;
+    *)
+      say "pnpm runner 未初始化。"
+      exit 1
+      ;;
+  esac
 }
 
 checkout_repo() {
-  if [ -d "$INSTALL_DIR/.git" ]; then
-    say "发现已有目录：$INSTALL_DIR，正在更新..."
-    git -C "$INSTALL_DIR" pull --ff-only
+  if [ -d "${INSTALL_DIR}/.git" ]; then
+    say "发现已有目录：${INSTALL_DIR}，正在更新..."
+    git -C "${INSTALL_DIR}" pull --ff-only
     return
   fi
 
-  if [ -e "$INSTALL_DIR" ]; then
-    say "目录已存在但不是 git 仓库：$INSTALL_DIR"
+  if [ -e "${INSTALL_DIR}" ]; then
+    say "目录已存在但不是 git 仓库：${INSTALL_DIR}"
     say "请换一个目录：MO_LIFE_PACK_DIR=/your/path bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.sh)\""
     exit 1
   fi
 
-  say "正在下载 Mo Life Pack 到：$INSTALL_DIR"
-  git clone "$REPO_URL" "$INSTALL_DIR"
+  say "正在下载 Mo Life Pack 到：${INSTALL_DIR}"
+  git clone "${REPO_URL}" "${INSTALL_DIR}"
 }
 
 main() {
   say "开始安装 Mo Life Pack。"
   ensure_git
   checkout_repo
-  cd "$INSTALL_DIR"
+  cd "${INSTALL_DIR}"
 
   ensure_pnpm
   warn_node_runtime
@@ -107,7 +132,11 @@ main() {
   fi
 
   say "安装完成。以后可以进入目录继续使用："
-  say "cd \"$INSTALL_DIR\" && pnpm run bridge:run"
+  if need_command pnpm; then
+    say "cd \"${INSTALL_DIR}\" && pnpm run bridge:run"
+  else
+    say "cd \"${INSTALL_DIR}\" && npm exec --yes \"pnpm@${PNPM_VERSION}\" -- run bridge:run"
+  fi
 }
 
 main "$@"

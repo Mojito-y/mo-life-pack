@@ -8,6 +8,8 @@
 
 前置条件：本机需要有 Node.js 和 git。建议使用当前 Node.js LTS（Node 22 或更新版本），这样 `lark-channel-bridge` 可以正常运行。
 
+不需要预先安装 pnpm。安装脚本会优先使用已有 `pnpm`；如果没有，会尝试 `corepack pnpm` 或 `npm exec pnpm@9.0.0 --`，不会要求写入 `/usr/local/bin`。
+
 复制下面这一行到终端执行即可：
 
 ```bash
