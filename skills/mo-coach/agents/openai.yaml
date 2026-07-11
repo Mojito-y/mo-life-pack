@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mo Coach"
+  short_description: "Personalized fitness coaching skill"
+  default_prompt: "Use $mo-coach to design or update a personalized training plan."

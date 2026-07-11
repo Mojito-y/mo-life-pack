@@ -1,0 +1,10 @@
+{
+  "coachName": "Mo Coach",
+  "style": "calm, concise, evidence-informed",
+  "goals": ["general_fitness"],
+  "equipment": ["bodyweight"],
+  "weeklySchedule": ["Mon", "Wed", "Fri"],
+  "sessionMinutes": 45,
+  "constraints": []
+}
+

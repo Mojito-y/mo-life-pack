@@ -1,0 +1,15 @@
+{
+  "name": "mo-life-pack",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "setup": "node packages/setup-cli/src/index.js setup",
+    "doctor": "node packages/setup-cli/src/index.js doctor",
+    "install:skill": "node scripts/install-skill.js",
+    "dev:lark": "node apps/lark-bot/src/index.js",
+    "plan:coach": "node packages/mo-coach-core/src/plan.js"
+  }
+}
+

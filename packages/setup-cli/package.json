@@ -1,0 +1,9 @@
+{
+  "name": "@mo-life-pack/setup-cli",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mo-life-setup": "src/index.js"
+  }
+}
+

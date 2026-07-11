@@ -1,0 +1,12 @@
+node_modules/
+.pnpm-store/
+dist/
+build/
+coverage/
+.DS_Store
+.env
+.env.local
+coach.config.json
+*.log
+/.codex-local/
+
