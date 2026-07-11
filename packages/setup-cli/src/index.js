@@ -12,6 +12,7 @@ const configTemplatePath = path.join(repoRoot, "templates", "coach.config.exampl
 const bridgeTemplatePath = path.join(repoRoot, "templates", "lark-agent-bridge.config.example.json");
 const envTemplatePath = path.join(repoRoot, "templates", "env.example");
 const skillInstallScript = path.join(repoRoot, "scripts", "install-skill.js");
+const runnerCommand = "npm";
 
 async function exists(filePath) {
   try {
@@ -156,9 +157,9 @@ async function setup() {
   process.stdout.write(`已保存 ${path.relative(repoRoot, configPath)}\n`);
   process.stdout.write(`已保存 ${path.relative(repoRoot, bridgeConfigPath)}\n`);
   if (install.status !== 0) {
-    process.stdout.write("Skill 安装可能需要处理权限。检查后可运行 pnpm install:skill。\n");
+    process.stdout.write(`Skill 安装可能需要处理权限。检查后可运行 ${runnerCommand} run install:skill。\n`);
   }
-  process.stdout.write("下一步：运行 pnpm run bridge:run，扫码绑定飞书 PersonalAgent。\n");
+  process.stdout.write(`下一步：运行 ${runnerCommand} run bridge:run，扫码绑定飞书 PersonalAgent。\n`);
   process.stdout.write(`Skill 安装脚本位置：${path.relative(repoRoot, skillInstallScript)}\n`);
 }
 
@@ -190,7 +191,7 @@ async function bridgeDoctor() {
   const bridgeConfigExists = await exists(bridgeConfigPath);
   if (!bridgeConfigExists) {
     process.stdout.write("MISS lark-agent-bridge.config.json\n");
-    process.stdout.write("请先运行 pnpm run setup 生成 bridge 配置。\n");
+    process.stdout.write(`请先运行 ${runnerCommand} run setup 生成 bridge 配置。\n`);
     process.exitCode = 1;
     return;
   }
@@ -207,7 +208,7 @@ async function bridgeDoctor() {
     process.stdout.write(`OK bridge command: ${bridgeCommand}\n`);
   } else if (result.error) {
     process.stdout.write(`MISS bridge command: ${bridgeCommand}\n`);
-    const installCommand = process.env.LARK_CHANNEL_BRIDGE_INSTALL_COMMAND || bridgeConfig.installCommand;
+    const installCommand = normalizeBridgeInstallCommand(process.env.LARK_CHANNEL_BRIDGE_INSTALL_COMMAND || bridgeConfig.installCommand);
     if (installCommand) {
       process.stdout.write(`建议先执行 bridge 安装命令：${installCommand}\n`);
     }
@@ -227,10 +228,22 @@ function materializeBridgeArgs(args) {
   return args.map((arg) => arg === "." ? repoRoot : arg);
 }
 
+function normalizeBridgeInstallCommand(command) {
+  if (!command) {
+    return command;
+  }
+
+  if (/^\s*pnpm\s+install\s*$/.test(command)) {
+    return `${runnerCommand} install`;
+  }
+
+  return command;
+}
+
 async function loadBridgeConfig() {
   await loadEnvLocal();
   if (!(await exists(bridgeConfigPath))) {
-    throw new Error("缺少 lark-agent-bridge.config.json，请先运行 pnpm run setup。");
+    throw new Error(`缺少 lark-agent-bridge.config.json，请先运行 ${runnerCommand} run setup。`);
   }
   return readJson(bridgeConfigPath);
 }
@@ -249,7 +262,7 @@ async function bridgeInstall() {
     return;
   }
 
-  const installCommand = process.env.LARK_CHANNEL_BRIDGE_INSTALL_COMMAND || bridgeConfig.installCommand;
+  const installCommand = normalizeBridgeInstallCommand(process.env.LARK_CHANNEL_BRIDGE_INSTALL_COMMAND || bridgeConfig.installCommand);
   if (!installCommand) {
     process.stdout.write("MISS bridge install command\n");
     process.exitCode = 1;

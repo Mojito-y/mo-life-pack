@@ -8,7 +8,7 @@
 
 前置条件：本机需要有 Node.js 和 git。建议使用当前 Node.js LTS（Node 22 或更新版本），这样 `lark-channel-bridge` 可以正常运行。
 
-不需要预先安装 pnpm。安装脚本会优先使用已有 `pnpm`；如果没有，会尝试 `corepack pnpm` 或 `npm exec pnpm@9.0.0 --`，不会要求写入 `/usr/local/bin`。
+不需要安装 pnpm，也不需要执行 `corepack enable`。安装和日常命令默认使用 Node.js 自带的 `npm`。
 
 复制下面这一行到终端执行即可：
 
@@ -19,7 +19,6 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/Mojito-y/mo-life-pack/ma
 这条命令会自动完成：
 
 - 下载或更新本仓库到 `~/mo-life-pack`
-- 准备 `pnpm`
 - 安装项目依赖
 - 引导设置 Mo Coach 的名字、风格、目标、器械和训练时长
 - 安装 Mo Coach Codex skill
@@ -30,7 +29,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/Mojito-y/mo-life-pack/ma
 
 ```bash
 cd ~/mo-life-pack
-pnpm run bridge:run
+npm run bridge:run
 ```
 
 第一次运行会显示二维码。用飞书 / Lark 扫码后，按向导创建或绑定 PersonalAgent。这个 profile 会使用：
@@ -46,31 +45,31 @@ workspace: ~/mo-life-pack
 检查基础安装：
 
 ```bash
-pnpm run doctor
+npm run doctor
 ```
 
 检查 bridge 是否可用：
 
 ```bash
-pnpm run bridge:doctor
+npm run bridge:doctor
 ```
 
 首次前台启动和扫码绑定：
 
 ```bash
-pnpm run bridge:run
+npm run bridge:run
 ```
 
 确认能收发消息后，后台启动：
 
 ```bash
-pnpm run bridge:start
+npm run bridge:start
 ```
 
 查看后台状态：
 
 ```bash
-pnpm run bridge:status
+npm run bridge:status
 ```
 
 ## Mo Coach 能做什么
@@ -137,9 +136,9 @@ MO_LIFE_PACK_DIR="$HOME/Tools/mo-life-pack" bash -c "$(curl -fsSL https://raw.gi
 ```bash
 git clone https://github.com/Mojito-y/mo-life-pack.git
 cd mo-life-pack
-pnpm install
-pnpm run setup
-pnpm run bridge:run
+npm install
+npm run setup
+npm run bridge:run
 ```
 
 ## 仓库结构

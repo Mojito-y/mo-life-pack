@@ -6,7 +6,7 @@
   "profile": "mo-coach",
   "agent": "codex",
   "workspace": ".",
-  "installCommand": "pnpm install",
+  "installCommand": "npm install",
   "firstRunArgs": ["run", "--profile", "mo-coach", "--agent", "codex", "--workspace", "."],
   "serviceArgs": ["start", "--profile", "mo-coach", "--agent", "codex", "--workspace", "."],
   "statusArgs": ["status", "--profile", "mo-coach"],
