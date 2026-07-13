@@ -9,28 +9,17 @@
 
 ## 新手一条命令安装
 
+当前只支持 macOS / Linux，不支持 Windows 原生环境。
+
 前置条件：本机需要有 Node.js 和 git。`lark-channel-bridge` 需要 Node.js 22 LTS 或更新版本；如果使用 Node.js 21.x，启动 bridge 时会因为依赖缺少 `node:util.styleText` 而失败。
 
 不需要安装 pnpm，也不需要执行 `corepack enable`。安装和日常命令默认使用 Node.js 自带的 `npm`。
-
-### macOS / Linux
 
 复制下面这一行到终端执行即可：
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.sh)"
 ```
-
-
-### Windows PowerShell
-
-复制下面这一行到 PowerShell 执行即可：
-
-```powershell
-irm https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.ps1 | iex
-```
-
-注意：不要把终端左侧的 `PS C:\Users\你>` 也复制进去；只复制命令本身。
 
 这条命令会自动完成：
 
@@ -43,15 +32,6 @@ irm https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.ps1 | i
 - 安装项目依赖里的 `lark-channel-bridge`
 
 安装完成后，进入目录启动飞书机器人向导：
-
-Windows PowerShell：
-
-```powershell
-cd ~/mo-life-pack
-npm.cmd run bridge:run
-```
-
-macOS / Linux：
 
 ```bash
 cd ~/mo-life-pack
@@ -192,12 +172,6 @@ workspace: 当前安装目录
 ./node_modules/.bin/lark-channel-bridge
 ```
 
-Windows 下会自动使用对应的 `.cmd` shim：
-
-```text
-.\node_modules\.bin\lark-channel-bridge.cmd
-```
-
 如果你想改成自己的 bridge 命令，可以在 `.env.local` 写：
 
 ```text
@@ -218,22 +192,6 @@ LARK_CHANNEL_CODEX_BIN=/your/path/codex
 
 ## 安装卡住排查
 
-### Windows PowerShell 拦截 `npm.ps1`
-
-如果看到类似下面的报错：
-
-```text
-无法加载文件 C:\Program Files\nodejs\npm.ps1，因为在此系统上禁止运行脚本
-```
-
-请使用 `npm.cmd` 代替 `npm`：
-
-```powershell
-npm.cmd run bridge:run
-```
-
-Windows 一键安装脚本会自动使用 `npm.cmd`，不需要用户修改 ExecutionPolicy。
-
 如果一条命令长时间没有进展，通常卡在访问 GitHub，而不是 Mo Life Pack 本身。可以先单独运行：
 
 ```bash
@@ -248,27 +206,11 @@ git ls-remote https://github.com/Mojito-y/mo-life-pack.git HEAD
 
 如果你希望完全静默地使用默认配置：
 
-Windows PowerShell：
-
-```powershell
-$env:MO_LIFE_PACK_ASSUME_DEFAULTS="1"; irm https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.ps1 | iex
-```
-
-macOS / Linux：
-
 ```bash
 MO_LIFE_PACK_ASSUME_DEFAULTS=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.sh)"
 ```
 
 指定默认安装的 agent：
-
-Windows PowerShell：
-
-```powershell
-$env:MO_LIFE_PACK_AGENT="industry-dd-agent"; $env:MO_LIFE_PACK_ASSUME_DEFAULTS="1"; irm https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.ps1 | iex
-```
-
-macOS / Linux：
 
 ```bash
 MO_LIFE_PACK_AGENT=industry-dd-agent MO_LIFE_PACK_ASSUME_DEFAULTS=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.sh)"
@@ -277,14 +219,6 @@ MO_LIFE_PACK_AGENT=industry-dd-agent MO_LIFE_PACK_ASSUME_DEFAULTS=1 bash -c "$(c
 ## 自定义安装目录
 
 如果你不想安装到 `~/mo-life-pack`：
-
-Windows PowerShell：
-
-```powershell
-$env:MO_LIFE_PACK_DIR="$HOME\Tools\mo-life-pack"; irm https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.ps1 | iex
-```
-
-macOS / Linux：
 
 ```bash
 MO_LIFE_PACK_DIR="$HOME/Tools/mo-life-pack" bash -c "$(curl -fsSL https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.sh)"
@@ -305,7 +239,6 @@ npm run bridge:run
 ```text
 mo-life-pack/
 ├── install.sh                                  # 新手一条命令入口
-├── install.ps1                                 # Windows PowerShell 一条命令入口
 ├── skills/mo-coach/                            # Codex skill
 ├── skills/industry-dd-agent/                   # 行业项目初筛 DD skill
 ├── industry-profiles/                          # 行业 DD profile 示例

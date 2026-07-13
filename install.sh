@@ -19,7 +19,7 @@ ensure_git() {
     return
   fi
 
-  say "没有找到 git。macOS 用户可以先运行：xcode-select --install"
+  say "没有找到 git。macOS 用户可以先运行：xcode-select --install；Linux 用户请用系统包管理器安装 git。"
   say "安装完成后重新执行 README 里的那条安装命令。"
   exit 1
 }
