@@ -10,6 +10,15 @@
 
 不需要安装 pnpm，也不需要执行 `corepack enable`。安装和日常命令默认使用 Node.js 自带的 `npm`。
 
+### macOS / Linux
+
+复制下面这一行到终端执行即可：
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.sh)"
+```
+
+
 ### Windows PowerShell
 
 复制下面这一行到 PowerShell 执行即可：
@@ -19,14 +28,6 @@ irm https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.ps1 | i
 ```
 
 注意：不要把终端左侧的 `PS C:\Users\你>` 也复制进去；只复制命令本身。
-
-### macOS / Linux
-
-复制下面这一行到终端执行即可：
-
-```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.sh)"
-```
 
 这条命令会自动完成：
 
