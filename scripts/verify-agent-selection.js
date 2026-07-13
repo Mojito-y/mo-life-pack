@@ -14,7 +14,7 @@ if (missing.length) {
 }
 
 for (const agent of catalog) {
-  for (const field of ["id", "displayName", "description", "audience", "configTemplate", "configOutput", "skillPath", "bridgeProfile", "bridgePrompt"]) {
+  for (const field of ["id", "displayName", "description", "audience", "configTemplate", "configOutput", "skillPath", "rulesTemplate", "bridgeProfile", "bridgePrompt"]) {
     if (!agent[field]) {
       console.error(`${agent.id || "unknown"} 缺少字段：${field}`);
       process.exit(1);

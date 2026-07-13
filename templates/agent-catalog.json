@@ -8,6 +8,7 @@
     "configTemplate": "templates/coach.config.example.json",
     "configOutput": "coach.config.json",
     "skillPath": "skills/mo-coach",
+    "rulesTemplate": "templates/agent-rules/mo-coach.md",
     "bridgeProfile": "mo-coach",
     "bridgePrompt": "Use $mo-coach as {coachName} to answer fitness check-ins and update training plans."
   },
@@ -20,6 +21,7 @@
     "configTemplate": "templates/industry-dd.config.example.json",
     "configOutput": "industry-dd.config.json",
     "skillPath": "skills/industry-dd-agent",
+    "rulesTemplate": "templates/agent-rules/industry-dd-agent.md",
     "bridgeProfile": "industry-dd-agent",
     "bridgePrompt": "Use $industry-dd-agent to screen projects with configurable industry profiles, cite evidence, and produce DD cards."
   }

@@ -125,6 +125,7 @@ Mo Coach 支持：
 - 自定义教练风格，比如温柔、严格、简洁、鼓励型、科学派
 - 多种训练目标：减脂、增肌、力量、体能、灵活性、恢复、综合健康
 - 按器械、时间、训练日程和身体限制生成训练计划
+- 内置碳循环饮食策略：把高碳日绑定大肌群/高强度训练，把低碳日绑定休息或恢复日，并给出蛋白质、主食时机和饮水建议
 - 在飞书里通过 PersonalAgent 做打卡、提醒、问答和周计划更新
 
 ## Industry DD Agent 能做什么
@@ -203,13 +204,13 @@ Windows 下会自动使用对应的 `.cmd` shim：
 LARK_CHANNEL_BRIDGE_COMMAND=/your/path/lark-channel-bridge
 ```
 
-如果 bridge 报 `未找到本地 Codex CLI`，macOS Codex App 常见路径是：
+如果 bridge 报 `未找到本地 Codex CLI` 或 `agent-binary-not-executable`，macOS ChatGPT App 常见路径是：
 
 ```text
-/Applications/Codex.app/Contents/Resources/codex
+/Applications/ChatGPT.app/Contents/Resources/codex
 ```
 
-安装向导会自动检测这个路径；如果你的 Codex CLI 在别的位置，可以在 `.env.local` 写：
+安装向导会优先检测 PATH 里的 `codex`，再检测 ChatGPT/Codex App 内置路径；如果 `.env.local` 里已有不可执行的旧路径，会在下次 `bridge:doctor` 或 `bridge:run` 前自动修正。如果你的 Codex CLI 在别的位置，可以在 `.env.local` 写：
 
 ```text
 LARK_CHANNEL_CODEX_BIN=/your/path/codex

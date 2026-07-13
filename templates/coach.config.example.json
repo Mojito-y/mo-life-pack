@@ -5,6 +5,23 @@
   "equipment": ["bodyweight"],
   "weeklySchedule": ["Mon", "Wed", "Fri"],
   "sessionMinutes": 45,
-  "constraints": []
+  "constraints": [],
+  "bodyWeightKg": null,
+  "nutrition": {
+    "carbCycling": {
+      "enabled": false,
+      "strategy": "training-day-carb-cycling",
+      "highCarbDays": ["Mon", "Fri"],
+      "mediumCarbDays": ["Wed"],
+      "lowCarbDays": ["Tue", "Thu", "Sat", "Sun"],
+      "proteinGPerKg": 1.8,
+      "fatGPerKgLow": 0.8,
+      "fatGPerKgHigh": 0.6,
+      "waterMlPerKg": 35,
+      "notes": [
+        "高碳日优先安排腿、背或高强度训练。",
+        "低碳日优先安排休息、轻有氧或灵活性恢复。"
+      ]
+    }
+  }
 }
-

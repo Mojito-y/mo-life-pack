@@ -10,8 +10,9 @@ description: Generate personalized fitness coaching plans and coach-style output
 1. Read the user's coach name, style, primary goal(s), available equipment, weekly schedule, session length, and constraints.
 2. Normalize missing fields with the defaults in `coach.config.example.json` or the active config.
 3. Build a plan that matches the primary goal first, then adapts volume, conditioning, and mobility to the available time and equipment.
-4. Keep the voice aligned to the requested style.
-5. Use `scripts/generate_plan.js` for a deterministic JSON plan when you need a reusable output shape.
+4. If nutrition or fat loss is involved, check whether carb cycling is enabled or appropriate, then align high/medium/low carb days with training stress.
+5. Keep the voice aligned to the requested style.
+6. Use `scripts/generate_plan.js` for a deterministic JSON plan when you need a reusable output shape.
 
 ## Goal handling
 
@@ -31,15 +32,17 @@ Pick one primary goal, then blend the rest lightly:
 - Prefer the smallest effective program over a fancy one.
 - State warm-up, main work, accessory work, and recovery notes.
 - Adjust exercise choice to the listed equipment.
+- For carb cycling, keep protein stable, put higher carbs near hard training, use lower carbs on rest/recovery days, and avoid extreme zero-carb advice.
+- When body weight or calorie data is missing, use relative portions and ask for the missing data instead of inventing exact macros.
 - When the user mentions pain, injury, or medical limits, reduce load and point them to professional care as needed.
 
 ## References
 
 - `references/coaching-model.md`: goal-to-plan mapping
+- `references/carb-cycling.md`: Chinese carb cycling knowledge base for fat-loss nutrition planning
 - `references/safety-boundaries.md`: safety and escalation rules
 - `references/lark-workflows.md`: Feishu/Lark handoff formats
 
 ## Bundled script
 
 - `scripts/generate_plan.js`: deterministic plan generator for a config file or JSON input
-

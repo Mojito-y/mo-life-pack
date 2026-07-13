@@ -11,6 +11,7 @@ const agentConfigPath = path.join(repoRoot, "agent.config.json");
 const configPath = path.join(repoRoot, "coach.config.json");
 const industryDdConfigPath = path.join(repoRoot, "industry-dd.config.json");
 const bridgeConfigPath = path.join(repoRoot, "lark-agent-bridge.config.json");
+const agentRulesPath = path.join(repoRoot, "AGENTS.md");
 const agentCatalogPath = path.join(repoRoot, "templates", "agent-catalog.json");
 const agentConfigTemplatePath = path.join(repoRoot, "templates", "agent.config.example.json");
 const configTemplatePath = path.join(repoRoot, "templates", "coach.config.example.json");
@@ -19,8 +20,14 @@ const bridgeTemplatePath = path.join(repoRoot, "templates", "lark-agent-bridge.c
 const envTemplatePath = path.join(repoRoot, "templates", "env.example");
 const skillInstallScript = path.join(repoRoot, "scripts", "install-skill.js");
 const runnerCommand = process.platform === "win32" ? "npm.cmd" : "npm";
-const macCodexAppBinary = "/Applications/Codex.app/Contents/Resources/codex";
+const macCodexAppBinaryCandidates = [
+  "/Applications/ChatGPT.app/Contents/Resources/codex",
+  "/Applications/Codex.app/Contents/Resources/codex"
+];
+const macCodexAppBinary = macCodexAppBinaryCandidates[0];
 const minimumBridgeNodeMajor = 22;
+const agentRulesStart = "<!-- mo-life-pack-agent-rules:start -->";
+const agentRulesEnd = "<!-- mo-life-pack-agent-rules:end -->";
 
 async function exists(filePath) {
   try {
@@ -38,6 +45,54 @@ async function executableExists(filePath) {
   } catch {
     return false;
   }
+}
+
+async function codexBinaryUsable(value) {
+  if (!value) {
+    return false;
+  }
+
+  if (path.isAbsolute(value) || value.includes("/") || value.includes("\\")) {
+    return executableExists(value);
+  }
+
+  const check = spawnSync(value, ["--version"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    timeout: 5000
+  });
+  return check.status === 0;
+}
+
+function findCommandPath(command) {
+  const lookupCommand = process.platform === "win32" ? "where" : "which";
+  const result = spawnSync(lookupCommand, [command], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    timeout: 5000
+  });
+  if (result.status !== 0) {
+    return "";
+  }
+
+  return result.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)[0] || "";
+}
+
+async function findCodexBinaryPath() {
+  const pathCodex = findCommandPath("codex");
+  if (pathCodex && await executableExists(pathCodex)) {
+    return pathCodex;
+  }
+
+  if (process.platform === "darwin") {
+    for (const candidate of macCodexAppBinaryCandidates) {
+      if (await executableExists(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  return "";
 }
 
 async function readJson(filePath) {
@@ -121,6 +176,39 @@ function renderBridgePrompt(template, values) {
   return template.replace(/\{(\w+)\}/g, (_, key) => values[key] ?? "");
 }
 
+function renderAgentRules(template, selectedAgent, config) {
+  return renderBridgePrompt(template, {
+    agentId: selectedAgent.id,
+    agentName: config.agentName || selectedAgent.name,
+    coachName: config.coachName || selectedAgent.name,
+    defaultProfile: config.defaultProfile || "medtech-bci"
+  });
+}
+
+function upsertGeneratedAgentRules(current, generated) {
+  const start = current.indexOf(agentRulesStart);
+  const end = current.indexOf(agentRulesEnd);
+  if (start !== -1 && end !== -1 && end > start) {
+    const afterEnd = end + agentRulesEnd.length;
+    return `${current.slice(0, start)}${generated}${current.slice(afterEnd).replace(/^\n+/, "\n")}`;
+  }
+
+  return `${generated}\n${current.replace(/^\n+/, "")}`;
+}
+
+async function ensureAgentRules(selectedAgent, config) {
+  if (!selectedAgent.rulesTemplate) {
+    return false;
+  }
+
+  const template = await readFile(resolveRepoPath(selectedAgent.rulesTemplate), "utf8");
+  const body = renderAgentRules(template, selectedAgent, config).trim();
+  const generated = `${agentRulesStart}\n${body}\n${agentRulesEnd}\n`;
+  const current = await exists(agentRulesPath) ? await readFile(agentRulesPath, "utf8") : "";
+  await writeFile(agentRulesPath, current ? upsertGeneratedAgentRules(current, generated) : generated);
+  return true;
+}
+
 function resolveRepoPath(value) {
   if (!value || path.isAbsolute(value)) {
     return value;
@@ -180,49 +268,41 @@ async function loadEnvLocal() {
 }
 
 async function detectCodexBinaryPath() {
-  if (process.env.LARK_CHANNEL_CODEX_BIN) {
+  if (await codexBinaryUsable(process.env.LARK_CHANNEL_CODEX_BIN)) {
     return process.env.LARK_CHANNEL_CODEX_BIN;
   }
 
-  const pathCodex = spawnSync("codex", ["--version"], {
-    cwd: repoRoot,
-    encoding: "utf8",
-    timeout: 5000
-  });
-  if (pathCodex.status === 0) {
-    return "";
+  if (process.env.LARK_CHANNEL_CODEX_BIN) {
+    delete process.env.LARK_CHANNEL_CODEX_BIN;
   }
 
-  if (await executableExists(macCodexAppBinary)) {
-    return macCodexAppBinary;
-  }
-
-  return "";
+  return findCodexBinaryPath();
 }
 
 async function getCodexCliStatus() {
   if (process.env.LARK_CHANNEL_CODEX_BIN) {
+    const ok = await codexBinaryUsable(process.env.LARK_CHANNEL_CODEX_BIN);
     return {
-      ok: await executableExists(process.env.LARK_CHANNEL_CODEX_BIN),
+      ok,
       label: process.env.LARK_CHANNEL_CODEX_BIN,
       source: "LARK_CHANNEL_CODEX_BIN"
     };
   }
 
-  const pathCodex = spawnSync("codex", ["--version"], {
-    cwd: repoRoot,
-    encoding: "utf8",
-    timeout: 5000
-  });
-  if (pathCodex.status === 0) {
-    return { ok: true, label: "codex", source: "PATH" };
+  const pathCodex = findCommandPath("codex");
+  if (pathCodex && await executableExists(pathCodex)) {
+    return { ok: true, label: pathCodex, source: "PATH" };
   }
 
-  if (await executableExists(macCodexAppBinary)) {
-    return { ok: true, label: macCodexAppBinary, source: "macOS Codex App" };
+  if (process.platform === "darwin") {
+    for (const candidate of macCodexAppBinaryCandidates) {
+      if (await executableExists(candidate)) {
+        return { ok: true, label: candidate, source: "macOS app bundle" };
+      }
+    }
   }
 
-  return { ok: false, label: macCodexAppBinary, source: "macOS Codex App" };
+  return { ok: false, label: "codex", source: "PATH" };
 }
 
 function upsertBlankEnvValue(text, key, value) {
@@ -248,6 +328,28 @@ function upsertBlankEnvValue(text, key, value) {
   return next.join("\n").replace(/\n*$/, "\n");
 }
 
+function upsertEnvValue(text, key, value) {
+  const lines = text.split(/\r?\n/);
+  let found = false;
+  const next = lines.map((line) => {
+    if (!line.startsWith(`${key}=`)) {
+      return line;
+    }
+
+    found = true;
+    return `${key}=${value}`;
+  });
+
+  if (!found) {
+    if (next.length && next[next.length - 1] !== "") {
+      next.push("");
+    }
+    next.push(`${key}=${value}`);
+  }
+
+  return next.join("\n").replace(/\n*$/, "\n");
+}
+
 async function ensureCodexBinaryHint() {
   const codexPath = await detectCodexBinaryPath();
   if (!codexPath) {
@@ -259,8 +361,8 @@ async function ensureCodexBinaryHint() {
   if (await exists(envLocalPath)) {
     const current = await readFile(envLocalPath, "utf8");
     const values = parseEnv(current);
-    if (!values.LARK_CHANNEL_CODEX_BIN) {
-      await writeFile(envLocalPath, upsertBlankEnvValue(current, "LARK_CHANNEL_CODEX_BIN", codexPath));
+    if (!await codexBinaryUsable(values.LARK_CHANNEL_CODEX_BIN)) {
+      await writeFile(envLocalPath, upsertEnvValue(current, "LARK_CHANNEL_CODEX_BIN", codexPath));
     }
   }
 
@@ -385,6 +487,7 @@ async function setup() {
   await writeFile(agentConfigPath, JSON.stringify(agentConfig, null, 2) + "\n");
   await writeFile(configPathToWrite, JSON.stringify(config, null, 2) + "\n");
   await writeFile(bridgeConfigPath, JSON.stringify(bridgeConfig, null, 2) + "\n");
+  const rulesWritten = await ensureAgentRules(selectedAgent, config);
   const install = spawnSync(process.execPath, [skillInstallScript, "--agent", selectedAgent.id], {
     cwd: repoRoot,
     stdio: "inherit"
@@ -395,6 +498,9 @@ async function setup() {
   process.stdout.write(`已保存 ${path.relative(repoRoot, agentConfigPath)}\n`);
   process.stdout.write(`已保存 ${path.relative(repoRoot, configPathToWrite)}\n`);
   process.stdout.write(`已保存 ${path.relative(repoRoot, bridgeConfigPath)}\n`);
+  if (rulesWritten) {
+    process.stdout.write(`已保存 ${path.relative(repoRoot, agentRulesPath)}（${selectedAgent.displayName} 运行说明）\n`);
+  }
   if (install.status !== 0) {
     process.stdout.write(`Skill 安装可能需要处理权限。检查后可运行 ${runnerCommand} run install:skill。\n`);
   }
@@ -432,7 +538,7 @@ async function doctor() {
   if (codexCli.ok) {
     process.stdout.write(`OK Codex CLI (${codexCli.source}): ${codexCli.label}\n`);
   } else {
-    process.stdout.write(`WARN Codex CLI 未找到。macOS Codex App 常见路径：${macCodexAppBinary}\n`);
+    process.stdout.write(`WARN Codex CLI 未找到。macOS ChatGPT App 常见路径：${macCodexAppBinary}\n`);
     process.stdout.write("如果 Codex CLI 在其他位置，请在 .env.local 设置 LARK_CHANNEL_CODEX_BIN。\n");
   }
 
@@ -509,6 +615,45 @@ function normalizeBridgeInstallCommand(command) {
   return command;
 }
 
+function larkChannelConfigFile() {
+  const home = process.env.HOME || process.env.USERPROFILE;
+  return home ? path.join(home, ".lark-channel", "config.json") : "";
+}
+
+async function ensureLarkChannelProfileUsesRules(bridgeConfig) {
+  const profile = bridgeConfig.profile;
+  const filePath = larkChannelConfigFile();
+  if (!profile || !filePath || !(await exists(filePath))) {
+    return false;
+  }
+
+  let config;
+  try {
+    config = await readJson(filePath);
+  } catch {
+    return false;
+  }
+
+  const profileConfig = config.profiles?.[profile];
+  if (!profileConfig || profileConfig.agentKind !== "codex") {
+    return false;
+  }
+
+  profileConfig.codex = {
+    ...(profileConfig.codex || {}),
+    inheritCodexHome: true,
+    ignoreUserConfig: false,
+    ignoreRules: false
+  };
+
+  if (process.env.LARK_CHANNEL_CODEX_BIN) {
+    profileConfig.codex.binaryPath = process.env.LARK_CHANNEL_CODEX_BIN;
+  }
+
+  await writeFile(filePath, JSON.stringify(config, null, 2) + "\n");
+  return true;
+}
+
 async function loadBridgeConfig() {
   await loadEnvLocal();
   await ensureCodexBinaryHint();
@@ -557,6 +702,9 @@ async function runBridgeCommand(kind) {
   const bridgeConfig = await loadBridgeConfig();
   if (!ensureBridgeNodeRuntime()) {
     return;
+  }
+  if (kind === "run" || kind === "start") {
+    await ensureLarkChannelProfileUsesRules(bridgeConfig);
   }
   const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND
     ? maybeWindowsCommandShim(process.env.LARK_CHANNEL_BRIDGE_COMMAND)
