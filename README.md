@@ -40,7 +40,16 @@ irm https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.ps1 | i
 
 安装完成后，进入目录启动飞书机器人向导：
 
+Windows PowerShell：
+
 ```powershell
+cd ~/mo-life-pack
+npm.cmd run bridge:run
+```
+
+macOS / Linux：
+
+```bash
 cd ~/mo-life-pack
 npm run bridge:run
 ```
@@ -160,6 +169,22 @@ LARK_CHANNEL_CODEX_BIN=/your/path/codex
 ```
 
 ## 安装卡住排查
+
+### Windows PowerShell 拦截 `npm.ps1`
+
+如果看到类似下面的报错：
+
+```text
+无法加载文件 C:\Program Files\nodejs\npm.ps1，因为在此系统上禁止运行脚本
+```
+
+请使用 `npm.cmd` 代替 `npm`：
+
+```powershell
+npm.cmd run bridge:run
+```
+
+Windows 一键安装脚本会自动使用 `npm.cmd`，不需要用户修改 ExecutionPolicy。
 
 如果一条命令长时间没有进展，通常卡在访问 GitHub，而不是 Mo Life Pack 本身。可以先单独运行：
 

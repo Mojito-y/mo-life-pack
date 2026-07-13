@@ -2,6 +2,7 @@ $ErrorActionPreference = "Stop"
 
 $RepoUrl = if ($env:MO_LIFE_PACK_REPO_URL) { $env:MO_LIFE_PACK_REPO_URL } else { "https://github.com/Mojito-y/mo-life-pack.git" }
 $InstallDir = if ($env:MO_LIFE_PACK_DIR) { $env:MO_LIFE_PACK_DIR } else { Join-Path $HOME "mo-life-pack" }
+$NpmCommand = $null
 
 function Say {
   param([string]$Message)
@@ -25,7 +26,13 @@ function Ensure-Git {
 }
 
 function Ensure-Npm {
+  if (Test-Command "npm.cmd") {
+    $script:NpmCommand = "npm.cmd"
+    return
+  }
+
   if (Test-Command "npm") {
+    $script:NpmCommand = "npm"
     return
   }
 
@@ -97,7 +104,7 @@ function Checkout-Repo {
 
 function Run-Npm {
   param([string[]]$Arguments)
-  & npm @Arguments
+  & $script:NpmCommand @Arguments
   if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
   }
@@ -127,4 +134,4 @@ if ($env:MO_LIFE_PACK_SKIP_BRIDGE_INSTALL -ne "1") {
 }
 
 Say "安装完成。以后可以进入目录继续使用："
-Say "cd `"$InstallDir`"; npm run bridge:run"
+Say "cd `"$InstallDir`"; $($script:NpmCommand) run bridge:run"

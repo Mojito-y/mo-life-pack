@@ -13,7 +13,7 @@ const configTemplatePath = path.join(repoRoot, "templates", "coach.config.exampl
 const bridgeTemplatePath = path.join(repoRoot, "templates", "lark-agent-bridge.config.example.json");
 const envTemplatePath = path.join(repoRoot, "templates", "env.example");
 const skillInstallScript = path.join(repoRoot, "scripts", "install-skill.js");
-const runnerCommand = "npm";
+const runnerCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const macCodexAppBinary = "/Applications/Codex.app/Contents/Resources/codex";
 
 async function exists(filePath) {
