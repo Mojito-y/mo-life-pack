@@ -22,6 +22,10 @@
     "bridge:status": "node packages/setup-cli/src/index.js bridge-status",
     "bridge:stop": "node packages/setup-cli/src/index.js bridge-stop",
     "dev:lark": "node apps/lark-bot/src/index.js",
-    "plan:coach": "node packages/mo-coach-core/src/plan.js"
+    "plan:coach": "node packages/mo-coach-core/src/plan.js",
+    "dd:screen": "node packages/industry-dd-core/src/screen.js",
+    "dd:profile": "node packages/industry-dd-core/src/profile.js",
+    "verify:agents": "node scripts/verify-agent-selection.js",
+    "verify:industry-dd": "node scripts/verify-industry-dd.js"
   }
 }

@@ -121,7 +121,7 @@ Warn-NodeRuntime
 Say "正在安装依赖..."
 Run-Npm @("install")
 
-Say "开始初始化 Mo Coach。一路回车即可使用默认配置。"
+Say "开始初始化 Mo Life Pack Agent。第一步会选择要安装的 agent；一路回车会默认安装 Mo Coach。"
 if ($env:MO_LIFE_PACK_ASSUME_DEFAULTS -eq "1") {
   Run-Npm @("run", "setup")
 } else {

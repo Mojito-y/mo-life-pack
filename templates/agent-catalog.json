@@ -1,0 +1,26 @@
+[
+  {
+    "id": "mo-coach",
+    "name": "Mo Coach",
+    "displayName": "AI 健身教练",
+    "description": "适合减脂、增肌、力量、体能和日常健康管理。可以根据目标、器械、训练时间和反馈生成计划，并通过飞书做打卡与复盘。",
+    "audience": "想把饮食、训练、饮水和复盘变成每日闭环的个人用户",
+    "configTemplate": "templates/coach.config.example.json",
+    "configOutput": "coach.config.json",
+    "skillPath": "skills/mo-coach",
+    "bridgeProfile": "mo-coach",
+    "bridgePrompt": "Use $mo-coach as {coachName} to answer fitness check-ins and update training plans."
+  },
+  {
+    "id": "industry-dd-agent",
+    "name": "Industry DD Agent",
+    "displayName": "行业项目初筛 DD Agent",
+    "description": "适合 FA、投资人、行业研究或项目筛选。可以按行业自定义关键评估词条，把 BP、访谈记录和项目材料生成带证据的初筛 DD 卡。",
+    "audience": "需要快速判断项目、梳理风险、生成后续尽调问题的一级市场和行业研究用户",
+    "configTemplate": "templates/industry-dd.config.example.json",
+    "configOutput": "industry-dd.config.json",
+    "skillPath": "skills/industry-dd-agent",
+    "bridgeProfile": "industry-dd-agent",
+    "bridgePrompt": "Use $industry-dd-agent to screen projects with configurable industry profiles, cite evidence, and produce DD cards."
+  }
+]

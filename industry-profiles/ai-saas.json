@@ -1,0 +1,54 @@
+{
+  "id": "ai-saas",
+  "name": "AI SaaS",
+  "description": "用于企业 AI 应用、AI SaaS、智能体平台和行业软件项目初筛。",
+  "sections": ["客户问题", "产品与交付", "数据闭环", "商业指标", "风险与下一步"],
+  "scoring": {
+    "scale": ["pass", "watch", "reject"],
+    "default": "watch"
+  },
+  "terms": [
+    {
+      "name": "客户痛点",
+      "aliases": ["痛点", "客户需求", "业务问题", "降本增效", "效率"],
+      "description": "判断项目是否清楚说明目标客户的高频刚需。",
+      "evidenceRequired": "客户访谈、试点反馈、付费原因、业务流程前后对比。",
+      "redFlags": ["只讲 AI 能力，不讲客户为什么买"],
+      "followUpQuestions": ["客户在没有你们之前怎么解决？", "预算来自哪个部门？"]
+    },
+    {
+      "name": "数据闭环",
+      "aliases": ["数据", "反馈", "闭环", "训练", "私有数据", "知识库"],
+      "description": "判断项目是否拥有可持续提升产品效果的数据来源和反馈机制。",
+      "evidenceRequired": "数据来源、授权方式、反馈链路、模型评估指标和迭代频率。",
+      "redFlags": ["只调用通用模型，没有行业数据积累"],
+      "followUpQuestions": ["客户使用后会留下哪些可复用数据？", "效果如何被量化和回流？"]
+    },
+    {
+      "name": "交付形态",
+      "aliases": ["SaaS", "私有化", "API", "插件", "工作流", "agent"],
+      "description": "判断项目的产品交付方式、部署成本和可复制性。",
+      "evidenceRequired": "部署方式、交付周期、实施人天、标准化程度和客户成功流程。",
+      "redFlags": ["每个客户都重度定制", "实施收入高但订阅收入弱"],
+      "followUpQuestions": ["一个新客户从签约到上线需要多久？", "多少比例功能可标准化复用？"]
+    },
+    {
+      "name": "商业指标",
+      "aliases": ["ARR", "MRR", "留存", "续费", "毛利", "CAC", "LTV"],
+      "description": "判断项目是否有可验证的收入质量、留存和增长效率。",
+      "evidenceRequired": "ARR/MRR、客户数、续费率、毛利率、销售周期和获客成本。",
+      "redFlags": ["只有试点没有付费", "收入集中在少数定制项目"],
+      "followUpQuestions": ["当前 ARR 和续费率是多少？", "最大客户收入占比是多少？"]
+    }
+  ],
+  "expertProfiles": [
+    {
+      "name": "目标行业 CIO / 业务负责人",
+      "questions": ["这个场景是否真的有预算？", "上线阻力主要来自业务、IT 还是合规？"]
+    },
+    {
+      "name": "SaaS 增长专家",
+      "questions": ["当前商业指标是否支持规模化销售？", "交付成本是否会吞掉毛利？"]
+    }
+  ]
+}

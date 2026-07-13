@@ -7,9 +7,14 @@ import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
 const repoRoot = process.cwd();
+const agentConfigPath = path.join(repoRoot, "agent.config.json");
 const configPath = path.join(repoRoot, "coach.config.json");
+const industryDdConfigPath = path.join(repoRoot, "industry-dd.config.json");
 const bridgeConfigPath = path.join(repoRoot, "lark-agent-bridge.config.json");
+const agentCatalogPath = path.join(repoRoot, "templates", "agent-catalog.json");
+const agentConfigTemplatePath = path.join(repoRoot, "templates", "agent.config.example.json");
 const configTemplatePath = path.join(repoRoot, "templates", "coach.config.example.json");
+const industryDdConfigTemplatePath = path.join(repoRoot, "templates", "industry-dd.config.example.json");
 const bridgeTemplatePath = path.join(repoRoot, "templates", "lark-agent-bridge.config.example.json");
 const envTemplatePath = path.join(repoRoot, "templates", "env.example");
 const skillInstallScript = path.join(repoRoot, "scripts", "install-skill.js");
@@ -36,6 +41,65 @@ async function executableExists(filePath) {
 
 async function readJson(filePath) {
   return JSON.parse(await readFile(filePath, "utf8"));
+}
+
+async function loadAgentCatalog() {
+  const catalog = await readJson(agentCatalogPath);
+  return catalog.map((agent) => ({
+    ...agent,
+    configTemplatePath: resolveRepoPath(agent.configTemplate),
+    configOutputPath: resolveRepoPath(agent.configOutput),
+    skillSourcePath: resolveRepoPath(agent.skillPath)
+  }));
+}
+
+function findAgent(catalog, id) {
+  return catalog.find((agent) => agent.id === id);
+}
+
+function formatAgentList(catalog) {
+  return catalog.map((agent, index) => {
+    return `${index + 1}. ${agent.displayName}（${agent.id}）\n   ${agent.description}\n   适合：${agent.audience}`;
+  }).join("\n\n");
+}
+
+async function chooseAgent(rl, catalog, { useDefaults }) {
+  const requested = process.env.MO_LIFE_PACK_AGENT?.trim();
+  const defaultAgentId = "mo-coach";
+
+  if (requested) {
+    const selected = findAgent(catalog, requested);
+    if (!selected) {
+      throw new Error(`未知 agent：${requested}。可选：${catalog.map((agent) => agent.id).join(", ")}`);
+    }
+    return selected;
+  }
+
+  if (useDefaults) {
+    return findAgent(catalog, defaultAgentId);
+  }
+
+  process.stdout.write("请选择要安装的 Agent：\n\n");
+  process.stdout.write(`${formatAgentList(catalog)}\n\n`);
+  const answer = (await rl.question(`请输入序号或 agent id [${defaultAgentId}]: `)).trim();
+  if (!answer) {
+    return findAgent(catalog, defaultAgentId);
+  }
+
+  const numeric = Number(answer);
+  if (Number.isInteger(numeric) && numeric >= 1 && numeric <= catalog.length) {
+    return catalog[numeric - 1];
+  }
+
+  const selected = findAgent(catalog, answer);
+  if (!selected) {
+    throw new Error(`未知 agent：${answer}。请重新运行 setup，并从列表中选择。`);
+  }
+  return selected;
+}
+
+function renderBridgePrompt(template, values) {
+  return template.replace(/\{(\w+)\}/g, (_, key) => values[key] ?? "");
 }
 
 function resolveRepoPath(value) {
@@ -209,29 +273,50 @@ async function ensureEnvLocal() {
 }
 
 async function setup() {
-  const template = await readJson(configTemplatePath);
+  const catalog = await loadAgentCatalog();
   const bridgeTemplate = await readJson(bridgeTemplatePath);
   const useDefaults = process.env.MO_LIFE_PACK_ASSUME_DEFAULTS === "1";
-  let config;
   let bridgeConfig = bridgeTemplate;
+  let selectedAgent;
+  let configPathToWrite;
+  let config;
 
   if (useDefaults) {
-    process.stdout.write("使用默认配置初始化 Mo Coach 和飞书机器人 Agent Bridge。\n");
-    config = template;
-    bridgeConfig = {
-      ...bridgeTemplate,
-      bridgeCommand: bridgeCommandFromTemplate(bridgeTemplate),
-      workspace: repoRoot
-    };
+    selectedAgent = await chooseAgent(null, catalog, { useDefaults });
+    process.stdout.write(`使用默认配置初始化 ${selectedAgent.displayName} 和飞书机器人 Agent Bridge。\n`);
   } else {
     const rl = readline.createInterface({ input, output });
     try {
-      process.stdout.write("开始设置 Mo Coach。看不懂的问题直接回车即可使用默认值。\n\n");
-      const coachName = (await rl.question(`教练名称 [${template.coachName}]: `)).trim() || template.coachName;
-      const style = (await rl.question(`教练风格 [${template.style}]: `)).trim() || template.style;
-      const goals = (await rl.question("训练目标，多个用英文逗号分隔 [general_fitness]: ")).trim();
-      const equipment = (await rl.question("可用器械，多个用英文逗号分隔 [bodyweight]: ")).trim();
-      const sessionMinutes = (await rl.question(`每次训练分钟数 [${template.sessionMinutes}]: `)).trim();
+      process.stdout.write("开始设置 Mo Life Pack。看不懂的问题直接回车即可使用默认值。\n\n");
+      selectedAgent = await chooseAgent(rl, catalog, { useDefaults });
+
+      const template = await readJson(selectedAgent.configTemplatePath);
+      if (selectedAgent.id === "mo-coach") {
+        const coachName = (await rl.question(`教练名称 [${template.coachName}]: `)).trim() || template.coachName;
+        const style = (await rl.question(`教练风格 [${template.style}]: `)).trim() || template.style;
+        const goals = (await rl.question("训练目标，多个用英文逗号分隔 [general_fitness]: ")).trim();
+        const equipment = (await rl.question("可用器械，多个用英文逗号分隔 [bodyweight]: ")).trim();
+        const sessionMinutes = (await rl.question(`每次训练分钟数 [${template.sessionMinutes}]: `)).trim();
+        config = {
+          ...template,
+          coachName,
+          style,
+          goals: goals ? goals.split(",").map((item) => item.trim()).filter(Boolean) : template.goals,
+          equipment: equipment ? equipment.split(",").map((item) => item.trim()).filter(Boolean) : template.equipment,
+          sessionMinutes: sessionMinutes ? Number(sessionMinutes) : template.sessionMinutes
+        };
+      } else {
+        const agentName = (await rl.question(`Agent 名称 [${template.agentName}]: `)).trim() || template.agentName;
+        const defaultProfile = (await rl.question(`默认行业 profile [${template.defaultProfile}]: `)).trim() || template.defaultProfile;
+        const workspaceDir = (await rl.question(`项目工作区目录 [${template.workspaceDir}]: `)).trim() || template.workspaceDir;
+        config = {
+          ...template,
+          agentName,
+          defaultProfile,
+          workspaceDir
+        };
+      }
+
       const connectBridge = (await rl.question("是否接入 lark-channel-bridge 飞书机器人？[Y/n]: ")).trim().toLowerCase();
       const defaultBridgeCommand = bridgeCommandFromTemplate(bridgeTemplate);
       const bridgeCommand = connectBridge === "n"
@@ -241,37 +326,55 @@ async function setup() {
         ? bridgeTemplate.installCommand
         : (await rl.question(`Bridge 安装命令 [${bridgeTemplate.installCommand}]: `)).trim() || bridgeTemplate.installCommand;
 
-      config = {
-        ...template,
-        coachName,
-        style,
-        goals: goals ? goals.split(",").map((item) => item.trim()).filter(Boolean) : template.goals,
-        equipment: equipment ? equipment.split(",").map((item) => item.trim()).filter(Boolean) : template.equipment,
-        sessionMinutes: sessionMinutes ? Number(sessionMinutes) : template.sessionMinutes
-      };
       bridgeConfig = {
         ...bridgeTemplate,
         enabled: connectBridge !== "n",
         bridgeCommand,
         workspace: repoRoot,
-        installCommand: bridgeInstallCommand,
-        agentPrompt: `Use $mo-coach as ${coachName} to answer fitness check-ins and update training plans.`
+        installCommand: bridgeInstallCommand
       };
     } finally {
       rl.close();
     }
   }
 
-  await writeFile(configPath, JSON.stringify(config, null, 2) + "\n");
+  if (!config) {
+    config = await readJson(selectedAgent.configTemplatePath);
+  }
+
+  configPathToWrite = selectedAgent.configOutputPath;
+  const agentConfig = {
+    selectedAgent: selectedAgent.id,
+    installedAgents: [selectedAgent.id]
+  };
+  const promptValues = selectedAgent.id === "mo-coach"
+    ? { coachName: config.coachName || "Mo Coach" }
+    : { agentName: config.agentName || "Industry DD Agent" };
+
+  bridgeConfig = {
+    ...bridgeConfig,
+    profile: selectedAgent.bridgeProfile,
+    bridgeCommand: bridgeConfig.bridgeCommand || bridgeCommandFromTemplate(bridgeTemplate),
+    workspace: repoRoot,
+    firstRunArgs: ["run", "--profile", selectedAgent.bridgeProfile, "--agent", bridgeTemplate.agent || "codex", "--workspace", "."],
+    serviceArgs: ["start", "--profile", selectedAgent.bridgeProfile, "--agent", bridgeTemplate.agent || "codex", "--workspace", "."],
+    statusArgs: ["status", "--profile", selectedAgent.bridgeProfile],
+    stopArgs: ["stop", "--profile", selectedAgent.bridgeProfile],
+    agentPrompt: renderBridgePrompt(selectedAgent.bridgePrompt, promptValues)
+  };
+
+  await writeFile(agentConfigPath, JSON.stringify(agentConfig, null, 2) + "\n");
+  await writeFile(configPathToWrite, JSON.stringify(config, null, 2) + "\n");
   await writeFile(bridgeConfigPath, JSON.stringify(bridgeConfig, null, 2) + "\n");
-  const install = spawnSync(process.execPath, [skillInstallScript], {
+  const install = spawnSync(process.execPath, [skillInstallScript, "--agent", selectedAgent.id], {
     cwd: repoRoot,
     stdio: "inherit"
   });
 
   await ensureEnvLocal();
 
-  process.stdout.write(`已保存 ${path.relative(repoRoot, configPath)}\n`);
+  process.stdout.write(`已保存 ${path.relative(repoRoot, agentConfigPath)}\n`);
+  process.stdout.write(`已保存 ${path.relative(repoRoot, configPathToWrite)}\n`);
   process.stdout.write(`已保存 ${path.relative(repoRoot, bridgeConfigPath)}\n`);
   if (install.status !== 0) {
     process.stdout.write(`Skill 安装可能需要处理权限。检查后可运行 ${runnerCommand} run install:skill。\n`);
@@ -284,9 +387,16 @@ async function setup() {
 async function doctor() {
   await loadEnvLocal();
   const codexCli = await getCodexCliStatus();
-  const skillInstallTarget = path.join(process.env.HOME || "", ".codex", "skills", "mo-coach", "SKILL.md");
+  const agentConfig = await exists(agentConfigPath) ? await readJson(agentConfigPath) : { selectedAgent: "mo-coach" };
+  const selectedAgent = agentConfig.selectedAgent || "mo-coach";
+  const skillInstallTarget = path.join(process.env.HOME || "", ".codex", "skills", selectedAgent, "SKILL.md");
   const checks = [
-    ["skill scaffold", await exists(path.join(repoRoot, "skills", "mo-coach", "SKILL.md"))],
+    ["agent catalog", await exists(agentCatalogPath)],
+    ["agent config template", await exists(agentConfigTemplatePath)],
+    ["industry dd config template", await exists(industryDdConfigTemplatePath)],
+    ["industry profile schema", await exists(path.join(repoRoot, "templates", "industry-profile.schema.json"))],
+    ["mo coach skill scaffold", await exists(path.join(repoRoot, "skills", "mo-coach", "SKILL.md"))],
+    ["industry dd skill scaffold", await exists(path.join(repoRoot, "skills", "industry-dd-agent", "SKILL.md"))],
     ["coach config template", await exists(configTemplatePath)],
     ["env template", await exists(envTemplatePath)],
     ["env local", await exists(path.join(repoRoot, ".env.local"))],

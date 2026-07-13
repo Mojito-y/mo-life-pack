@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mo Life Pack Industry DD Profile",
+  "type": "object",
+  "required": ["id", "name", "description", "terms", "sections"],
+  "additionalProperties": true,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "行业 profile 标识，例如 medtech-bci 或 ai-saas"
+    },
+    "name": {
+      "type": "string",
+      "description": "行业 profile 中文名称"
+    },
+    "description": {
+      "type": "string",
+      "description": "适用范围说明"
+    },
+    "sections": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "scoring": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "terms": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "evidenceRequired"],
+        "additionalProperties": true,
+        "properties": {
+          "name": { "type": "string" },
+          "aliases": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "description": { "type": "string" },
+          "evidenceRequired": { "type": "string" },
+          "redFlags": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "followUpQuestions": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "expertProfiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": true,
+        "properties": {
+          "name": { "type": "string" },
+          "questions": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

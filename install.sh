@@ -102,7 +102,7 @@ main() {
   say "正在安装依赖..."
   npm install
 
-  say "开始初始化 Mo Coach。一路回车即可使用默认配置。"
+  say "开始初始化 Mo Life Pack Agent。第一步会选择要安装的 agent；一路回车会默认安装 Mo Coach。"
   if [ -t 0 ] && [ "${MO_LIFE_PACK_ASSUME_DEFAULTS:-}" != "1" ]; then
     npm run setup
   else

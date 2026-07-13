@@ -1,0 +1,6 @@
+{
+  "name": "@mo-life-pack/industry-dd-core",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js"
+}
