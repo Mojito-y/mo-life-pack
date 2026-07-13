@@ -10,6 +10,18 @@
 
 不需要安装 pnpm，也不需要执行 `corepack enable`。安装和日常命令默认使用 Node.js 自带的 `npm`。
 
+### Windows PowerShell
+
+复制下面这一行到 PowerShell 执行即可：
+
+```powershell
+irm https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.ps1 | iex
+```
+
+注意：不要把终端左侧的 `PS C:\Users\你>` 也复制进去；只复制命令本身。
+
+### macOS / Linux
+
 复制下面这一行到终端执行即可：
 
 ```bash
@@ -27,7 +39,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/Mojito-y/mo-life-pack/ma
 
 安装完成后，进入目录启动飞书机器人向导：
 
-```bash
+```powershell
 cd ~/mo-life-pack
 npm run bridge:run
 ```
@@ -122,6 +134,12 @@ workspace: 当前安装目录
 ./node_modules/.bin/lark-channel-bridge
 ```
 
+Windows 下会自动使用对应的 `.cmd` shim：
+
+```text
+.\node_modules\.bin\lark-channel-bridge.cmd
+```
+
 如果你想改成自己的 bridge 命令，可以在 `.env.local` 写：
 
 ```text
@@ -156,6 +174,14 @@ git ls-remote https://github.com/Mojito-y/mo-life-pack.git HEAD
 
 如果你希望完全静默地使用默认配置：
 
+Windows PowerShell：
+
+```powershell
+$env:MO_LIFE_PACK_ASSUME_DEFAULTS="1"; irm https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.ps1 | iex
+```
+
+macOS / Linux：
+
 ```bash
 MO_LIFE_PACK_ASSUME_DEFAULTS=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.sh)"
 ```
@@ -163,6 +189,14 @@ MO_LIFE_PACK_ASSUME_DEFAULTS=1 bash -c "$(curl -fsSL https://raw.githubuserconte
 ## 自定义安装目录
 
 如果你不想安装到 `~/mo-life-pack`：
+
+Windows PowerShell：
+
+```powershell
+$env:MO_LIFE_PACK_DIR="$HOME\Tools\mo-life-pack"; irm https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.ps1 | iex
+```
+
+macOS / Linux：
 
 ```bash
 MO_LIFE_PACK_DIR="$HOME/Tools/mo-life-pack" bash -c "$(curl -fsSL https://raw.githubusercontent.com/Mojito-y/mo-life-pack/main/install.sh)"
@@ -183,6 +217,7 @@ npm run bridge:run
 ```text
 mo-life-pack/
 ├── install.sh                                  # 新手一条命令入口
+├── install.ps1                                 # Windows PowerShell 一条命令入口
 ├── skills/mo-coach/                            # Codex skill
 ├── packages/setup-cli/                         # 初始化、检查、bridge 启动命令
 ├── packages/mo-coach-core/                     # 训练计划生成核心

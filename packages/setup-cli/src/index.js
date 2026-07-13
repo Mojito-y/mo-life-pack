@@ -45,8 +45,24 @@ function resolveRepoPath(value) {
   return path.join(repoRoot, value);
 }
 
+function maybeWindowsCommandShim(value) {
+  if (process.platform !== "win32" || !value || /\.(cmd|exe|bat)$/i.test(value)) {
+    return value;
+  }
+
+  if (path.isAbsolute(value) || value.startsWith(".") || value.includes("/") || value.includes("\\")) {
+    return `${value}.cmd`;
+  }
+
+  return value;
+}
+
+function resolveBridgeCommand(value) {
+  return maybeWindowsCommandShim(resolveRepoPath(value));
+}
+
 function bridgeCommandFromTemplate(template) {
-  return resolveRepoPath(template.bridgeCommand);
+  return resolveBridgeCommand(template.bridgeCommand);
 }
 
 function parseEnv(text) {
@@ -309,7 +325,9 @@ async function bridgeDoctor() {
   }
 
   const bridgeConfig = await readJson(bridgeConfigPath);
-  const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND || resolveRepoPath(bridgeConfig.bridgeCommand);
+  const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND
+    ? maybeWindowsCommandShim(process.env.LARK_CHANNEL_BRIDGE_COMMAND)
+    : resolveBridgeCommand(bridgeConfig.bridgeCommand);
   const result = spawnSync(bridgeCommand, ["--version"], {
     cwd: repoRoot,
     encoding: "utf8"
@@ -370,7 +388,9 @@ async function loadBridgeConfig() {
 
 async function bridgeInstall() {
   const bridgeConfig = await loadBridgeConfig();
-  const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND || resolveRepoPath(bridgeConfig.bridgeCommand);
+  const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND
+    ? maybeWindowsCommandShim(process.env.LARK_CHANNEL_BRIDGE_COMMAND)
+    : resolveBridgeCommand(bridgeConfig.bridgeCommand);
   if (path.isAbsolute(bridgeCommand) && await exists(bridgeCommand)) {
     process.stdout.write(`OK bridge 已安装：${bridgeCommand}\n`);
     return;
@@ -400,7 +420,9 @@ async function bridgeInstall() {
 
 async function runBridgeCommand(kind) {
   const bridgeConfig = await loadBridgeConfig();
-  const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND || resolveRepoPath(bridgeConfig.bridgeCommand);
+  const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND
+    ? maybeWindowsCommandShim(process.env.LARK_CHANNEL_BRIDGE_COMMAND)
+    : resolveBridgeCommand(bridgeConfig.bridgeCommand);
   const argsByKind = {
     run: bridgeConfig.firstRunArgs,
     start: bridgeConfig.serviceArgs,
