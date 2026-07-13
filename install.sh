@@ -61,7 +61,8 @@ warn_node_runtime() {
   local major
   major="$(node -p 'Number(process.versions.node.split(".")[0])' 2>/dev/null || printf '0')"
   if [ "$major" -lt 22 ]; then
-    say "提示：当前 Node.js 版本低于 22。Mo Life Pack 可以安装，但 lark-channel-bridge 运行建议使用当前 Node.js LTS。"
+    say "提示：当前 Node.js 版本低于 22。Mo Life Pack 可以安装，但 lark-channel-bridge 需要 Node.js 22 LTS 或更新版本才能运行。"
+    say "安装后如果要启动飞书机器人，请先切换 Node.js 22+，例如：nvm install 22 && nvm use 22"
   fi
 }
 

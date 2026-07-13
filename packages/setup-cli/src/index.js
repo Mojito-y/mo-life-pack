@@ -20,6 +20,7 @@ const envTemplatePath = path.join(repoRoot, "templates", "env.example");
 const skillInstallScript = path.join(repoRoot, "scripts", "install-skill.js");
 const runnerCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const macCodexAppBinary = "/Applications/Codex.app/Contents/Resources/codex";
+const minimumBridgeNodeMajor = 22;
 
 async function exists(filePath) {
   try {
@@ -41,6 +42,24 @@ async function executableExists(filePath) {
 
 async function readJson(filePath) {
   return JSON.parse(await readFile(filePath, "utf8"));
+}
+
+function currentNodeMajor() {
+  return Number(process.versions.node.split(".")[0]);
+}
+
+function ensureBridgeNodeRuntime() {
+  const major = currentNodeMajor();
+  if (major >= minimumBridgeNodeMajor) {
+    return true;
+  }
+
+  process.stdout.write(`当前 Node.js 版本是 ${process.version}，低于 lark-channel-bridge 需要的 Node.js ${minimumBridgeNodeMajor}+。\n`);
+  process.stdout.write("请先安装或切换到 Node.js 22 LTS 或更新版本，然后重新运行当前命令。\n");
+  process.stdout.write("macOS 常见做法：nvm install 22 && nvm use 22\n");
+  process.stdout.write("Windows 建议安装 Node.js LTS：https://nodejs.org/\n");
+  process.exitCode = 1;
+  return false;
 }
 
 async function loadAgentCatalog() {
@@ -435,6 +454,9 @@ async function bridgeDoctor() {
   }
 
   const bridgeConfig = await readJson(bridgeConfigPath);
+  if (!ensureBridgeNodeRuntime()) {
+    return;
+  }
   const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND
     ? maybeWindowsCommandShim(process.env.LARK_CHANNEL_BRIDGE_COMMAND)
     : resolveBridgeCommand(bridgeConfig.bridgeCommand);
@@ -498,6 +520,9 @@ async function loadBridgeConfig() {
 
 async function bridgeInstall() {
   const bridgeConfig = await loadBridgeConfig();
+  if (!ensureBridgeNodeRuntime()) {
+    return;
+  }
   const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND
     ? maybeWindowsCommandShim(process.env.LARK_CHANNEL_BRIDGE_COMMAND)
     : resolveBridgeCommand(bridgeConfig.bridgeCommand);
@@ -530,6 +555,9 @@ async function bridgeInstall() {
 
 async function runBridgeCommand(kind) {
   const bridgeConfig = await loadBridgeConfig();
+  if (!ensureBridgeNodeRuntime()) {
+    return;
+  }
   const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND
     ? maybeWindowsCommandShim(process.env.LARK_CHANNEL_BRIDGE_COMMAND)
     : resolveBridgeCommand(bridgeConfig.bridgeCommand);

@@ -70,7 +70,8 @@ function Warn-NodeRuntime {
   $major = 0
   [void][int]::TryParse("$majorText", [ref]$major)
   if ($major -lt 22) {
-    Say "提示：当前 Node.js 版本低于 22。Mo Life Pack 可以安装，但 lark-channel-bridge 运行建议使用当前 Node.js LTS。"
+    Say "提示：当前 Node.js 版本低于 22。Mo Life Pack 可以安装，但 lark-channel-bridge 需要 Node.js 22 LTS 或更新版本才能运行。"
+    Say "安装后如果要启动飞书机器人，请先安装或切换 Node.js 22+：https://nodejs.org/"
   }
 }
 

@@ -9,7 +9,7 @@
 
 ## 新手一条命令安装
 
-前置条件：本机需要有 Node.js 和 git。建议使用当前 Node.js LTS（Node 22 或更新版本），这样 `lark-channel-bridge` 可以正常运行。
+前置条件：本机需要有 Node.js 和 git。`lark-channel-bridge` 需要 Node.js 22 LTS 或更新版本；如果使用 Node.js 21.x，启动 bridge 时会因为依赖缺少 `node:util.styleText` 而失败。
 
 不需要安装 pnpm，也不需要执行 `corepack enable`。安装和日常命令默认使用 Node.js 自带的 `npm`。
 
