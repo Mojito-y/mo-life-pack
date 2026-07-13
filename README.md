@@ -2,8 +2,6 @@
 
 一个可以直接安装的「AI in daily life」工具包。当前第一项能力是 **Mo Coach**：通过 `lark-channel-bridge` 接入飞书 / Lark PersonalAgent 的 AI 健身教练。
 
-> 说明：你提到的 `zarazhangrui/lark-coding-agent-bridge` 仓库，实际发布包名和命令是 `lark-channel-bridge`。本仓库按这个真实命令接入。
-
 ## 新手一条命令安装
 
 前置条件：本机需要有 Node.js 和 git。建议使用当前 Node.js LTS（Node 22 或更新版本），这样 `lark-channel-bridge` 可以正常运行。
