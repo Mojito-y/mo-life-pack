@@ -12,7 +12,7 @@ import {
 } from "../packages/industry-dd-core/src/index.js";
 
 const repoRoot = process.cwd();
-const config = normalizeIndustryConfig(JSON.parse(await readFile(path.join(repoRoot, "templates", "industry-dd.config.example.json"), "utf8")));
+const config = normalizeIndustryConfig(JSON.parse(await readFile(path.join(repoRoot, "agents", "industry-dd", "templates", "industry-dd.config.example.json"), "utf8")));
 const medtechProfile = await loadProfile("medtech-bci", config, repoRoot);
 const aiProfile = await loadProfile("ai-saas", config, repoRoot);
 
@@ -30,7 +30,7 @@ if (!emptyResult.termResults.every((item) => item.status === "unknown")) {
   process.exit(1);
 }
 
-const sampleText = await readFile(path.join(repoRoot, "examples", "industry-dd", "ai-saas-input.txt"), "utf8");
+const sampleText = await readFile(path.join(repoRoot, "agents", "industry-dd", "examples", "ai-saas-input.txt"), "utf8");
 const aiResult = evaluateProject(aiProfile, createProjectIntake({ text: sampleText, sourceName: "ai-saas-input.txt" }));
 const markdown = renderMarkdownCard(aiResult);
 if (markdown.includes("注册路径") || markdown.includes("脑机接口")) {

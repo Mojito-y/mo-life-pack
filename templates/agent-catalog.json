@@ -18,7 +18,7 @@
     "displayName": "行业项目初筛 DD Agent",
     "description": "适合 FA、投资人、行业研究或项目筛选。可以按行业自定义关键评估词条，把 BP、访谈记录和项目材料生成带证据的初筛 DD 卡。",
     "audience": "需要快速判断项目、梳理风险、生成后续尽调问题的一级市场和行业研究用户",
-    "configTemplate": "templates/industry-dd.config.example.json",
+    "configTemplate": "agents/industry-dd/templates/industry-dd.config.example.json",
     "configOutput": "industry-dd.config.json",
     "skillPath": "skills/industry-dd-agent",
     "rulesTemplate": "templates/agent-rules/industry-dd-agent.md",

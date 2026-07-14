@@ -15,7 +15,7 @@ const agentRulesPath = path.join(repoRoot, "AGENTS.md");
 const agentCatalogPath = path.join(repoRoot, "templates", "agent-catalog.json");
 const agentConfigTemplatePath = path.join(repoRoot, "templates", "agent.config.example.json");
 const configTemplatePath = path.join(repoRoot, "templates", "coach.config.example.json");
-const industryDdConfigTemplatePath = path.join(repoRoot, "templates", "industry-dd.config.example.json");
+const industryDdConfigTemplatePath = path.join(repoRoot, "agents", "industry-dd", "templates", "industry-dd.config.example.json");
 const bridgeTemplatePath = path.join(repoRoot, "templates", "lark-agent-bridge.config.example.json");
 const envTemplatePath = path.join(repoRoot, "templates", "env.example");
 const skillInstallScript = path.join(repoRoot, "scripts", "install-skill.js");
@@ -515,7 +515,7 @@ async function doctor() {
     ["agent catalog", await exists(agentCatalogPath)],
     ["agent config template", await exists(agentConfigTemplatePath)],
     ["industry dd config template", await exists(industryDdConfigTemplatePath)],
-    ["industry profile schema", await exists(path.join(repoRoot, "templates", "industry-profile.schema.json"))],
+    ["industry profile schema", await exists(path.join(repoRoot, "agents", "industry-dd", "templates", "industry-profile.schema.json"))],
     ["mo coach skill scaffold", await exists(path.join(repoRoot, "skills", "mo-coach", "SKILL.md"))],
     ["industry dd skill scaffold", await exists(path.join(repoRoot, "skills", "industry-dd-agent", "SKILL.md"))],
     ["coach config template", await exists(configTemplatePath)],

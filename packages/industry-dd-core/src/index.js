@@ -8,7 +8,7 @@ export function normalizeIndustryConfig(raw = {}) {
   return {
     agentName: raw.agentName || "Industry DD Agent",
     defaultProfile: raw.defaultProfile || "medtech-bci",
-    profilesDir: raw.profilesDir || "industry-profiles",
+    profilesDir: raw.profilesDir || "agents/industry-dd/profiles",
     workspaceDir: raw.workspaceDir || ".mo-life-pack/industry-dd",
     summaryMode: raw.summaryMode || "concise",
     scoreScale: Array.isArray(raw.scoreScale) && raw.scoreScale.length ? raw.scoreScale : ["pass", "watch", "reject"],
