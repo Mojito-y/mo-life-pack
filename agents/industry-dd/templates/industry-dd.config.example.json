@@ -1,7 +1,7 @@
 {
   "agentName": "Industry DD Agent",
   "defaultProfile": "medtech-bci",
-  "profilesDir": "industry-profiles",
+  "profilesDir": "agents/industry-dd/profiles",
   "workspaceDir": ".mo-life-pack/industry-dd",
   "summaryMode": "concise",
   "scoreScale": ["pass", "watch", "reject"],

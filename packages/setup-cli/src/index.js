@@ -552,7 +552,7 @@ async function doctor() {
   const checks = [
     ["agent catalog", await exists(agentCatalogPath)],
     ["agent config template", await exists(agentConfigTemplatePath)],
-    ["industry profile schema", await exists(path.join(repoRoot, "templates", "industry-profile.schema.json"))],
+    ["industry profile schema", await exists(path.join(repoRoot, "agents", "industry-dd", "templates", "industry-profile.schema.json"))],
     ...agentScaffoldChecks,
     ["env template", await exists(envTemplatePath)],
     ["env local", await exists(path.join(repoRoot, ".env.local"))],

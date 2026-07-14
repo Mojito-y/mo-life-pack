@@ -27,8 +27,8 @@
 可以使用：
 
 ```bash
-npm run dd:screen -- industry-dd.config.json ai-saas examples/industry-dd/ai-saas-input.txt
-npm run dd:profile -- validate industry-profiles/ai-saas.json
+npm run dd:screen -- industry-dd.config.json ai-saas agents/industry-dd/examples/ai-saas-input.txt
+npm run dd:profile -- validate agents/industry-dd/profiles/ai-saas.json
 ```
 
 ## 边界

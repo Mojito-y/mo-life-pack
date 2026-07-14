@@ -210,22 +210,22 @@ Industry DD Agent 支持：
 本地试跑：
 
 ```bash
-npm run dd:screen -- industry-dd.config.json ai-saas examples/industry-dd/ai-saas-input.txt
+npm run dd:screen -- industry-dd.config.json ai-saas agents/industry-dd/examples/ai-saas-input.txt
 ```
 
 校验行业 profile：
 
 ```bash
-npm run dd:profile -- validate industry-profiles/ai-saas.json
+npm run dd:profile -- validate agents/industry-dd/profiles/ai-saas.json
 ```
 
-新增行业 profile 时，可以复制 `industry-profiles/ai-saas.json`，修改 `id`、`name`、`terms`、`sections` 和 `expertProfiles`。每个词条至少需要：
+新增行业 profile 时，可以复制 `agents/industry-dd/profiles/ai-saas.json`，修改 `id`、`name`、`terms`、`sections` 和 `expertProfiles`。每个词条至少需要：
 
 - `name`：词条名称
 - `description`：为什么要看这个词条
 - `evidenceRequired`：判断该词条需要什么证据
 
-Profile schema 可参考 `templates/industry-profile.schema.json`。
+Profile schema 可参考 `agents/industry-dd/templates/industry-profile.schema.json`。
 
 ## Investment Coach 能做什么
 
@@ -342,11 +342,11 @@ npm run bridge:run
 ```text
 mo-life-pack/
 ├── install.sh                                  # 新手一条命令入口
+├── agents/industry-dd/                         # Industry DD Agent 的 profile、示例和配置模板
 ├── skills/mo-coach/                            # Codex skill
 ├── skills/industry-dd-agent/                   # 行业项目初筛 DD skill
 ├── skills/investment-coach/                    # A 股/美股投资教练 skill
 ├── agents/investment-coach/workspace/          # 投资教练 profile 专属规则
-├── industry-profiles/                          # 行业 DD profile 示例
 ├── packages/setup-cli/                         # 初始化、检查、bridge 启动命令
 ├── packages/mo-coach-core/                     # 训练计划生成核心
 ├── packages/industry-dd-core/                  # 行业 DD profile、intake、评估和渲染核心
