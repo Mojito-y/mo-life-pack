@@ -1,21 +1,26 @@
-import { readFile, writeFile, access } from "node:fs/promises";
+#!/usr/bin/env node
+
+import { readFile, writeFile, access, mkdir, rename } from "node:fs/promises";
 import { constants } from "node:fs";
 import { spawnSync } from "node:child_process";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
+const supportedPlatforms = new Set(["darwin", "linux"]);
+if (!supportedPlatforms.has(process.platform)) {
+  process.stderr.write(`当前系统 ${process.platform} 暂不支持；当前仅支持 macOS/Linux。\n`);
+  process.exit(1);
+}
+
 const repoRoot = process.cwd();
 const agentConfigPath = path.join(repoRoot, "agent.config.json");
-const configPath = path.join(repoRoot, "coach.config.json");
-const industryDdConfigPath = path.join(repoRoot, "industry-dd.config.json");
 const bridgeConfigPath = path.join(repoRoot, "lark-agent-bridge.config.json");
 const agentRulesPath = path.join(repoRoot, "AGENTS.md");
 const agentCatalogPath = path.join(repoRoot, "templates", "agent-catalog.json");
 const agentConfigTemplatePath = path.join(repoRoot, "templates", "agent.config.example.json");
-const configTemplatePath = path.join(repoRoot, "templates", "coach.config.example.json");
-const industryDdConfigTemplatePath = path.join(repoRoot, "templates", "industry-dd.config.example.json");
 const bridgeTemplatePath = path.join(repoRoot, "templates", "lark-agent-bridge.config.example.json");
 const envTemplatePath = path.join(repoRoot, "templates", "env.example");
 const skillInstallScript = path.join(repoRoot, "scripts", "install-skill.js");
@@ -28,16 +33,6 @@ const macCodexAppBinary = macCodexAppBinaryCandidates[0];
 const minimumBridgeNodeMajor = 22;
 const agentRulesStart = "<!-- mo-life-pack-agent-rules:start -->";
 const agentRulesEnd = "<!-- mo-life-pack-agent-rules:end -->";
-
-function ensureSupportedPlatform() {
-  if (process.platform !== "win32") {
-    return;
-  }
-
-  process.stdout.write("Mo Life Pack 当前只支持 macOS / Linux，不再支持 Windows 原生环境。\n");
-  process.stdout.write("请在 macOS、Linux 机器或 Linux 服务器上安装运行。\n");
-  process.exit(1);
-}
 
 async function exists(filePath) {
   try {
@@ -62,7 +57,7 @@ async function codexBinaryUsable(value) {
     return false;
   }
 
-  if (path.isAbsolute(value) || value.includes("/") || value.includes("\\")) {
+  if (path.isAbsolute(value) || value.includes("/")) {
     return executableExists(value);
   }
 
@@ -120,7 +115,8 @@ function ensureBridgeNodeRuntime() {
 
   process.stdout.write(`当前 Node.js 版本是 ${process.version}，低于 lark-channel-bridge 需要的 Node.js ${minimumBridgeNodeMajor}+。\n`);
   process.stdout.write("请先安装或切换到 Node.js 22 LTS 或更新版本，然后重新运行当前命令。\n");
-  process.stdout.write("常见做法：nvm install 22 && nvm use 22\n");
+  process.stdout.write("macOS 常见做法：nvm install 22 && nvm use 22\n");
+  process.stdout.write("请安装 Node.js LTS：https://nodejs.org/\n");
   process.exitCode = 1;
   return false;
 }
@@ -422,7 +418,7 @@ async function setup() {
           equipment: equipment ? equipment.split(",").map((item) => item.trim()).filter(Boolean) : template.equipment,
           sessionMinutes: sessionMinutes ? Number(sessionMinutes) : template.sessionMinutes
         };
-      } else {
+      } else if (selectedAgent.id === "industry-dd-agent") {
         const agentName = (await rl.question(`Agent 名称 [${template.agentName}]: `)).trim() || template.agentName;
         const defaultProfile = (await rl.question(`默认行业 profile [${template.defaultProfile}]: `)).trim() || template.defaultProfile;
         const workspaceDir = (await rl.question(`项目工作区目录 [${template.workspaceDir}]: `)).trim() || template.workspaceDir;
@@ -432,6 +428,24 @@ async function setup() {
           defaultProfile,
           workspaceDir
         };
+      } else if (selectedAgent.id === "investment-coach") {
+        const agentName = (await rl.question(`教练名称 [${template.agentName}]: `)).trim() || template.agentName;
+        const markets = (await rl.question(`覆盖市场，多个用英文逗号分隔 [${template.markets.join(",")}]: `)).trim();
+        const primaryMarket = (await rl.question(`主要市场 [${template.primaryMarket}]: `)).trim() || template.primaryMarket;
+        const baseCurrency = (await rl.question(`基础币种，留空表示稍后确认 [${template.baseCurrency || "未设置"}]: `)).trim() || template.baseCurrency;
+        const defaultHorizon = (await rl.question(`默认投资期限，留空表示稍后确认 [${template.defaultHorizon || "未设置"}]: `)).trim() || template.defaultHorizon;
+        const workspaceDir = (await rl.question(`研究与复盘目录 [${template.workspaceDir}]: `)).trim() || template.workspaceDir;
+        config = {
+          ...template,
+          agentName,
+          markets: markets ? markets.split(",").map((item) => item.trim()).filter(Boolean) : template.markets,
+          primaryMarket,
+          baseCurrency,
+          defaultHorizon,
+          workspaceDir
+        };
+      } else {
+        throw new Error(`未实现 ${selectedAgent.id} 的交互式配置流程。`);
       }
 
       const connectBridge = (await rl.question("是否接入 lark-channel-bridge 飞书机器人？[Y/n]: ")).trim().toLowerCase();
@@ -464,17 +478,20 @@ async function setup() {
     selectedAgent: selectedAgent.id,
     installedAgents: [selectedAgent.id]
   };
-  const promptValues = selectedAgent.id === "mo-coach"
-    ? { coachName: config.coachName || "Mo Coach" }
-    : { agentName: config.agentName || "Industry DD Agent" };
+  const promptValues = {
+    coachName: config.coachName || "Mo Coach",
+    agentName: config.agentName || selectedAgent.name
+  };
+  const bridgeWorkspace = selectedAgent.bridgeWorkspace || ".";
+  const bridgeWorkspacePath = resolveRepoPath(bridgeWorkspace);
 
   bridgeConfig = {
     ...bridgeConfig,
     profile: selectedAgent.bridgeProfile,
     bridgeCommand: bridgeConfig.bridgeCommand || bridgeCommandFromTemplate(bridgeTemplate),
-    workspace: repoRoot,
-    firstRunArgs: ["run", "--profile", selectedAgent.bridgeProfile, "--agent", bridgeTemplate.agent || "codex", "--workspace", "."],
-    serviceArgs: ["start", "--profile", selectedAgent.bridgeProfile, "--agent", bridgeTemplate.agent || "codex", "--workspace", "."],
+    workspace: bridgeWorkspacePath,
+    firstRunArgs: ["run", "--profile", selectedAgent.bridgeProfile, "--agent", bridgeTemplate.agent || "codex", "--workspace", bridgeWorkspacePath],
+    serviceArgs: ["start", "--profile", selectedAgent.bridgeProfile, "--agent", bridgeTemplate.agent || "codex", "--workspace", bridgeWorkspacePath],
     statusArgs: ["status", "--profile", selectedAgent.bridgeProfile],
     stopArgs: ["stop", "--profile", selectedAgent.bridgeProfile],
     agentPrompt: renderBridgePrompt(selectedAgent.bridgePrompt, promptValues)
@@ -484,6 +501,9 @@ async function setup() {
   await writeFile(configPathToWrite, JSON.stringify(config, null, 2) + "\n");
   await writeFile(bridgeConfigPath, JSON.stringify(bridgeConfig, null, 2) + "\n");
   const rulesWritten = await ensureAgentRules(selectedAgent, config);
+  if (selectedAgent.dataWorkspace) {
+    await mkdir(resolveRepoPath(selectedAgent.dataWorkspace), { recursive: true });
+  }
   const install = spawnSync(process.execPath, [skillInstallScript, "--agent", selectedAgent.id], {
     cwd: repoRoot,
     stdio: "inherit"
@@ -501,30 +521,45 @@ async function setup() {
     process.stdout.write(`Skill 安装可能需要处理权限。检查后可运行 ${runnerCommand} run install:skill。\n`);
   }
   process.stdout.write(`下一步：运行 ${runnerCommand} run bridge:run，扫码绑定飞书 PersonalAgent。\n`);
-  process.stdout.write(`确认能收发消息后，按 Ctrl-C 停掉前台进程，再运行 ${runnerCommand} run bridge:start 后台常驻。\n`);
+  if (selectedAgent.bridgeWorkspace) {
+    process.stdout.write(`确认能收发消息后，按 Ctrl-C 停掉前台进程，运行 ${runnerCommand} run agent:configure-profile -- ${selectedAgent.id} 启用专属规则。\n`);
+    process.stdout.write(`然后运行 ${runnerCommand} run bridge:start -- ${selectedAgent.id} 后台常驻。\n`);
+  } else {
+    process.stdout.write(`确认能收发消息后，按 Ctrl-C 停掉前台进程，再运行 ${runnerCommand} run bridge:start 后台常驻。\n`);
+  }
   process.stdout.write(`Skill 安装脚本位置：${path.relative(repoRoot, skillInstallScript)}\n`);
 }
 
 async function doctor() {
   await loadEnvLocal();
   const codexCli = await getCodexCliStatus();
+  const catalog = await loadAgentCatalog();
   const agentConfig = await exists(agentConfigPath) ? await readJson(agentConfigPath) : { selectedAgent: "mo-coach" };
   const selectedAgent = agentConfig.selectedAgent || "mo-coach";
-  const skillInstallTarget = path.join(process.env.HOME || "", ".codex", "skills", selectedAgent, "SKILL.md");
+  const installedAgents = [...new Set(agentConfig.installedAgents?.length ? agentConfig.installedAgents : [selectedAgent])];
+  const agentScaffoldChecks = (await Promise.all(catalog.map(async (agent) => [
+    [`${agent.id} config template`, await exists(agent.configTemplatePath)],
+    [`${agent.id} skill scaffold`, await exists(path.join(agent.skillSourcePath, "SKILL.md"))],
+    ...(agent.bridgeWorkspace ? [
+      [`${agent.id} bridge workspace`, await exists(resolveRepoPath(agent.bridgeWorkspace))],
+      [`${agent.id} workspace rules`, await exists(path.join(resolveRepoPath(agent.bridgeWorkspace), "AGENTS.md"))]
+    ] : [])
+  ]))).flat();
+  const installedSkillChecks = await Promise.all(installedAgents.map(async (agentId) => [
+    `installed skill ${agentId}`,
+    await exists(path.join(os.homedir(), ".codex", "skills", agentId, "SKILL.md"))
+  ]));
   const checks = [
     ["agent catalog", await exists(agentCatalogPath)],
     ["agent config template", await exists(agentConfigTemplatePath)],
-    ["industry dd config template", await exists(industryDdConfigTemplatePath)],
     ["industry profile schema", await exists(path.join(repoRoot, "templates", "industry-profile.schema.json"))],
-    ["mo coach skill scaffold", await exists(path.join(repoRoot, "skills", "mo-coach", "SKILL.md"))],
-    ["industry dd skill scaffold", await exists(path.join(repoRoot, "skills", "industry-dd-agent", "SKILL.md"))],
-    ["coach config template", await exists(configTemplatePath)],
+    ...agentScaffoldChecks,
     ["env template", await exists(envTemplatePath)],
     ["env local", await exists(path.join(repoRoot, ".env.local"))],
     ["setup script", await exists(skillInstallScript)],
     ["lark agent bridge template", await exists(bridgeTemplatePath)],
     ["lark agent bridge config", await exists(bridgeConfigPath)],
-    ["installed skill", skillInstallTarget ? await exists(skillInstallTarget) : false]
+    ...installedSkillChecks
   ];
 
   const failures = checks.filter(([, ok]) => !ok);
@@ -560,8 +595,7 @@ async function bridgeDoctor() {
     return;
   }
   const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND
-    ? process.env.LARK_CHANNEL_BRIDGE_COMMAND
-    : resolveBridgeCommand(bridgeConfig.bridgeCommand);
+    || resolveBridgeCommand(bridgeConfig.bridgeCommand);
   const result = spawnSync(bridgeCommand, ["--version"], {
     cwd: repoRoot,
     encoding: "utf8"
@@ -599,6 +633,40 @@ function materializeBridgeArgs(args) {
   return args.map((arg) => arg === "." ? repoRoot : arg);
 }
 
+function parseBridgeTargetArgs(args) {
+  let agentId = "";
+  let profile = "";
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--profile") {
+      const value = args[index + 1]?.trim();
+      if (!value || value.startsWith("--")) {
+        throw new Error("--profile 需要一个 profile 名称。");
+      }
+      profile = value;
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith("--")) {
+      throw new Error(`未知参数：${arg}`);
+    }
+    if (agentId) {
+      throw new Error(`多余参数：${arg}`);
+    }
+    agentId = arg.trim();
+  }
+
+  if (profile && !agentId) {
+    throw new Error("使用 --profile 时必须先指定 agent id。");
+  }
+  if (profile && !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(profile)) {
+    throw new Error(`profile 名称不合法：${profile}`);
+  }
+
+  return { agentId, profile };
+}
+
 function normalizeBridgeInstallCommand(command) {
   if (!command) {
     return command;
@@ -612,12 +680,63 @@ function normalizeBridgeInstallCommand(command) {
 }
 
 function larkChannelConfigFile() {
-  const home = process.env.HOME;
+  const home = process.env.HOME || os.homedir();
   return home ? path.join(home, ".lark-channel", "config.json") : "";
 }
 
-async function ensureLarkChannelProfileUsesRules(bridgeConfig) {
-  const profile = bridgeConfig.profile;
+function larkChannelSessionCatalogFile(profile) {
+  const configFile = larkChannelConfigFile();
+  if (!configFile || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(profile || "")) {
+    return "";
+  }
+  return path.join(path.dirname(configFile), "profiles", profile, "sessions.json.catalog.json");
+}
+
+async function migrateLarkChannelSessionCatalog(profile, workspace, legacyWorkspaces) {
+  const filePath = larkChannelSessionCatalogFile(profile);
+  if (!filePath || !workspace || !legacyWorkspaces.length || !(await exists(filePath))) {
+    return 0;
+  }
+
+  let catalog;
+  try {
+    catalog = await readJson(filePath);
+  } catch {
+    return 0;
+  }
+  if (!Array.isArray(catalog)) {
+    return 0;
+  }
+
+  const legacyPaths = new Set(legacyWorkspaces.map((value) => path.resolve(value)));
+  let migrated = 0;
+  const nextCatalog = catalog.map((entry) => {
+    if (!entry || typeof entry !== "object") {
+      return entry;
+    }
+    let changed = false;
+    const nextEntry = { ...entry };
+    for (const field of ["cwdRealpath", "cwd"]) {
+      if (typeof entry[field] === "string" && legacyPaths.has(path.resolve(entry[field]))) {
+        nextEntry[field] = workspace;
+        changed = true;
+      }
+    }
+    if (changed) {
+      migrated += 1;
+    }
+    return nextEntry;
+  });
+
+  if (migrated) {
+    const tempPath = `${filePath}.tmp-${process.pid}`;
+    await writeFile(tempPath, JSON.stringify(nextCatalog, null, 2) + "\n", { mode: 0o600 });
+    await rename(tempPath, filePath);
+  }
+  return migrated;
+}
+
+async function ensureLarkChannelProfileUsesRules(profile, workspace = "", legacyWorkspaces = []) {
   const filePath = larkChannelConfigFile();
   if (!profile || !filePath || !(await exists(filePath))) {
     return false;
@@ -635,18 +754,33 @@ async function ensureLarkChannelProfileUsesRules(bridgeConfig) {
     return false;
   }
 
-  profileConfig.codex = {
-    ...(profileConfig.codex || {}),
-    inheritCodexHome: true,
-    ignoreUserConfig: false,
-    ignoreRules: false
+  const nextConfig = {
+    ...config,
+    profiles: {
+      ...config.profiles,
+      [profile]: {
+        ...profileConfig,
+        ...(workspace ? {
+          workspaces: {
+            ...(profileConfig.workspaces || {}),
+            default: workspace
+          }
+        } : {}),
+        codex: {
+          ...(profileConfig.codex || {}),
+          inheritCodexHome: true,
+          ignoreUserConfig: false,
+          ignoreRules: false,
+          ...(process.env.LARK_CHANNEL_CODEX_BIN ? { binaryPath: process.env.LARK_CHANNEL_CODEX_BIN } : {})
+        }
+      }
+    }
   };
 
-  if (process.env.LARK_CHANNEL_CODEX_BIN) {
-    profileConfig.codex.binaryPath = process.env.LARK_CHANNEL_CODEX_BIN;
-  }
-
-  await writeFile(filePath, JSON.stringify(config, null, 2) + "\n");
+  const tempPath = `${filePath}.tmp-${process.pid}`;
+  await writeFile(tempPath, JSON.stringify(nextConfig, null, 2) + "\n", { mode: 0o600 });
+  await rename(tempPath, filePath);
+  await migrateLarkChannelSessionCatalog(profile, workspace, legacyWorkspaces);
   return true;
 }
 
@@ -665,8 +799,7 @@ async function bridgeInstall() {
     return;
   }
   const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND
-    ? process.env.LARK_CHANNEL_BRIDGE_COMMAND
-    : resolveBridgeCommand(bridgeConfig.bridgeCommand);
+    || resolveBridgeCommand(bridgeConfig.bridgeCommand);
   if (path.isAbsolute(bridgeCommand) && await exists(bridgeCommand)) {
     process.stdout.write(`OK bridge 已安装：${bridgeCommand}\n`);
     return;
@@ -699,33 +832,64 @@ async function runBridgeCommand(kind) {
   if (!ensureBridgeNodeRuntime()) {
     return;
   }
-  if (kind === "run" || kind === "start") {
-    await ensureLarkChannelProfileUsesRules(bridgeConfig);
-  }
   const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND
-    ? process.env.LARK_CHANNEL_BRIDGE_COMMAND
-    : resolveBridgeCommand(bridgeConfig.bridgeCommand);
-  const argsByKind = {
-    run: bridgeConfig.firstRunArgs,
-    start: bridgeConfig.serviceArgs,
-    status: bridgeConfig.statusArgs,
-    stop: bridgeConfig.stopArgs || ["stop", "--profile", bridgeConfig.profile || "mo-coach"]
-  };
+    || resolveBridgeCommand(bridgeConfig.bridgeCommand);
+  const { agentId: requestedAgentId, profile: requestedProfile } = parseBridgeTargetArgs(process.argv.slice(3));
+  let requestedAgent;
+  let targetProfile = bridgeConfig.profile;
+  let targetWorkspace = "";
+  let legacyWorkspaces = [];
+  let argsByKind;
+  if (requestedAgentId) {
+    const catalog = await loadAgentCatalog();
+    requestedAgent = catalog.find((agent) => agent.id === requestedAgentId || agent.bridgeProfile === requestedAgentId);
+    if (!requestedAgent) {
+      throw new Error(`未知 agent/profile：${requestedAgentId}。可选：${catalog.map((agent) => agent.id).join(", ")}`);
+    }
+    const profile = requestedProfile || requestedAgent.bridgeProfile;
+    const workspace = resolveRepoPath(requestedAgent.bridgeWorkspace || ".");
+    targetProfile = profile;
+    targetWorkspace = workspace;
+    legacyWorkspaces = (requestedAgent.legacyBridgeWorkspaces || []).map(resolveRepoPath);
+    argsByKind = {
+      run: ["run", "--profile", profile, "--agent", bridgeConfig.agent || "codex", "--workspace", workspace],
+      start: ["start", "--profile", profile, "--agent", bridgeConfig.agent || "codex", "--workspace", workspace],
+      status: ["status", "--profile", profile],
+      stop: ["stop", "--profile", profile]
+    };
+  } else {
+    argsByKind = {
+      run: bridgeConfig.firstRunArgs,
+      start: bridgeConfig.serviceArgs,
+      status: bridgeConfig.statusArgs,
+      stop: bridgeConfig.stopArgs || ["stop", "--profile", bridgeConfig.profile || "mo-coach"]
+    };
+  }
+  if (kind === "run" || kind === "start") {
+    await ensureLarkChannelProfileUsesRules(targetProfile, targetWorkspace, legacyWorkspaces);
+  }
   const args = materializeBridgeArgs(argsByKind[kind] || bridgeConfig.firstRunArgs);
   const result = spawnSync(bridgeCommand, args, {
     cwd: repoRoot,
     stdio: "inherit"
   });
+  const profileArgSuffix = requestedAgentId
+    ? ` -- ${requestedAgentId}${requestedProfile ? ` --profile ${requestedProfile}` : ""}`
+    : "";
   if (kind === "run") {
-    process.stdout.write(`\nbridge:run 是前台绑定/调试模式；确认 bot 可用后，可以运行 ${runnerCommand} run bridge:start 后台常驻，再用 ${runnerCommand} run bridge:status 查看状态。\n`);
+    if (requestedAgent?.bridgeWorkspace) {
+      process.stdout.write(`\n确认 bot 可用并停止前台进程后，先运行 ${runnerCommand} run agent:configure-profile -- ${requestedAgent.id}${requestedProfile ? ` --profile ${requestedProfile}` : ""} 启用专属规则。\n`);
+      process.stdout.write(`再运行 ${runnerCommand} run bridge:start${profileArgSuffix} 后台常驻，并用 ${runnerCommand} run bridge:status${profileArgSuffix} 查看状态。\n`);
+    } else {
+      process.stdout.write(`\nbridge:run 是前台绑定/调试模式；确认 bot 可用后，可以运行 ${runnerCommand} run bridge:start${profileArgSuffix} 后台常驻，再用 ${runnerCommand} run bridge:status${profileArgSuffix} 查看状态。\n`);
+    }
   } else if (kind === "start" && (result.status ?? 1) === 0) {
-    process.stdout.write(`\n后台服务已启动。可以运行 ${runnerCommand} run bridge:status 查看状态。\n`);
+    process.stdout.write(`\n后台服务已启动。可以运行 ${runnerCommand} run bridge:status${profileArgSuffix} 查看状态。\n`);
   }
   process.exitCode = result.status ?? 1;
 }
 
 const command = process.argv[2];
-ensureSupportedPlatform();
 
 if (command === "setup") {
   await setup();
