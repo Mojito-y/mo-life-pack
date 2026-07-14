@@ -1,0 +1,25 @@
+{
+  "default_agent": "investment-coach",
+  "save_dir": "/absolute/path/to/mo-life-pack/.mo-life-pack/investment-coach/wechat-attachments",
+  "agents": {
+    "investment-coach": {
+      "type": "acp",
+      "command": "/absolute/path/to/mo-life-pack/agents/investment-coach/bin/codex",
+      "args": [
+        "app-server",
+        "--listen",
+        "stdio://"
+      ],
+      "aliases": [
+        "invest",
+        "coach"
+      ],
+      "cwd": "/absolute/path/to/mo-life-pack/agents/investment-coach/workspace",
+      "env": {
+        "NODE_BINARY": "/absolute/path/to/node",
+        "MO_LIFE_PACK_CODEX_BIN": "/absolute/path/to/real/codex",
+        "MO_LIFE_PACK_INVESTMENT_WORKSPACE": "/absolute/path/to/mo-life-pack/agents/investment-coach/workspace"
+      }
+    }
+  }
+}
