@@ -5,7 +5,11 @@ coverage/
 .DS_Store
 .env
 .env.local
+agent.config.json
 coach.config.json
+industry-dd.config.json
+investment-coach.config.json
+/.mo-life-pack/investment-coach/
 lark-agent-bridge.config.json
 *.log
 /.codex-local/

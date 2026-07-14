@@ -12,12 +12,15 @@
     "packages/*"
   ],
   "dependencies": {
-    "lark-channel-bridge": "^0.5.7"
+    "lark-channel-bridge": "^0.5.7",
+    "proper-lockfile": "^4.1.2"
   },
   "scripts": {
     "setup": "node packages/setup-cli/src/index.js setup",
     "doctor": "node packages/setup-cli/src/index.js doctor",
     "install:skill": "node scripts/install-skill.js",
+    "agent:add": "node scripts/add-agent.js",
+    "agent:configure-profile": "node scripts/configure-agent-profile.js",
     "bridge:install": "node packages/setup-cli/src/index.js bridge-install",
     "bridge:doctor": "node packages/setup-cli/src/index.js bridge-doctor",
     "bridge:run": "node packages/setup-cli/src/index.js bridge-run",
@@ -29,6 +32,7 @@
     "dd:screen": "node packages/industry-dd-core/src/screen.js",
     "dd:profile": "node packages/industry-dd-core/src/profile.js",
     "verify:agents": "node scripts/verify-agent-selection.js",
-    "verify:industry-dd": "node scripts/verify-industry-dd.js"
+    "verify:industry-dd": "node scripts/verify-industry-dd.js",
+    "verify:investment-coach": "node scripts/verify-investment-coach.js"
   }
 }

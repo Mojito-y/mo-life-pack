@@ -1,0 +1,45 @@
+{
+  "agentName": "投资教练",
+  "markets": ["A_SHARE", "US"],
+  "primaryMarket": "A_SHARE",
+  "baseCurrency": null,
+  "instruments": ["STOCK", "ETF"],
+  "defaultHorizon": null,
+  "workspaceDir": ".mo-life-pack/investment-coach",
+  "persona": {
+    "style": "SHARP_TONGUED_DOMINANT",
+    "intensity": 3,
+    "allowSharpBarbs": true,
+    "targetBehaviorNotIdentity": true,
+    "preferredAddress": null,
+    "seriousModeOnHighRisk": true,
+    "seriousModeLockWhileRiskActive": true,
+    "seriousModeCommands": ["严肃模式", "正常模式"],
+    "resumeModeCommands": ["毒舌模式", "教练模式"]
+  },
+  "benchmarks": {
+    "aShare": "000300.SH",
+    "us": "SPY",
+    "portfolio": null
+  },
+  "riskProfile": {
+    "investmentHorizonYears": null,
+    "maxDrawdownTolerancePct": null,
+    "liquidityReserveMonths": null,
+    "leverageAllowed": false,
+    "taxResidency": null
+  },
+  "discipline": {
+    "requirePreTradeCard": true,
+    "coolingOffHours": 24,
+    "coolingOffAppliesTo": "NEW_OR_INCREASED_UNPLANNED_RISK_ONLY",
+    "maxSinglePositionPct": null,
+    "maxSectorExposurePct": null,
+    "rebalanceBandPct": null
+  },
+  "dataPolicy": {
+    "requireAsOfTimestamp": true,
+    "requireSourceForKeyFacts": true,
+    "allowUnverifiedCurrentData": false
+  }
+}

@@ -24,5 +24,20 @@
     "rulesTemplate": "templates/agent-rules/industry-dd-agent.md",
     "bridgeProfile": "industry-dd-agent",
     "bridgePrompt": "Use $industry-dd-agent to screen projects with configurable industry profiles, cite evidence, and produce DD cards."
+  },
+  {
+    "id": "investment-coach",
+    "name": "Investment Coach",
+    "displayName": "投资教练",
+    "description": "毒舌支配型、证据驱动的个人投资教练，覆盖 A 股、美股个股研究、ETF/资产配置、持仓复盘和交易纪律。",
+    "audience": "希望建立可验证投资逻辑、组合风险预算和稳定复盘纪律的 A 股与美股个人投资者",
+    "configTemplate": "templates/investment-coach.config.example.json",
+    "configOutput": "investment-coach.config.json",
+    "skillPath": "skills/investment-coach",
+    "rulesTemplate": "templates/agent-rules/investment-coach.md",
+    "bridgeProfile": "investment-coach",
+    "bridgeWorkspace": "agent-workspaces/investment-coach",
+    "dataWorkspace": ".mo-life-pack/investment-coach",
+    "bridgePrompt": "Use $investment-coach as {agentName} in a sharp-tongued, commanding style for evidence-first A-share and US stock research, ETF allocation, portfolio reviews, and trading discipline. Target excuses and broken logic, never the user's identity."
   }
 ]
