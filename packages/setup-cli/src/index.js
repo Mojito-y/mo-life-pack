@@ -9,6 +9,12 @@ import process from "node:process";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
+const supportedPlatforms = new Set(["darwin", "linux"]);
+if (!supportedPlatforms.has(process.platform)) {
+  process.stderr.write(`当前系统 ${process.platform} 暂不支持；当前仅支持 macOS/Linux。\n`);
+  process.exit(1);
+}
+
 const repoRoot = process.cwd();
 const agentConfigPath = path.join(repoRoot, "agent.config.json");
 const bridgeConfigPath = path.join(repoRoot, "lark-agent-bridge.config.json");
@@ -18,7 +24,7 @@ const agentConfigTemplatePath = path.join(repoRoot, "templates", "agent.config.e
 const bridgeTemplatePath = path.join(repoRoot, "templates", "lark-agent-bridge.config.example.json");
 const envTemplatePath = path.join(repoRoot, "templates", "env.example");
 const skillInstallScript = path.join(repoRoot, "scripts", "install-skill.js");
-const runnerCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+const runnerCommand = "npm";
 const macCodexAppBinaryCandidates = [
   "/Applications/ChatGPT.app/Contents/Resources/codex",
   "/Applications/Codex.app/Contents/Resources/codex"
@@ -51,7 +57,7 @@ async function codexBinaryUsable(value) {
     return false;
   }
 
-  if (path.isAbsolute(value) || value.includes("/") || value.includes("\\")) {
+  if (path.isAbsolute(value) || value.includes("/")) {
     return executableExists(value);
   }
 
@@ -64,8 +70,7 @@ async function codexBinaryUsable(value) {
 }
 
 function findCommandPath(command) {
-  const lookupCommand = process.platform === "win32" ? "where" : "which";
-  const result = spawnSync(lookupCommand, [command], {
+  const result = spawnSync("which", [command], {
     cwd: repoRoot,
     encoding: "utf8",
     timeout: 5000
@@ -215,20 +220,8 @@ function resolveRepoPath(value) {
   return path.join(repoRoot, value);
 }
 
-function maybeWindowsCommandShim(value) {
-  if (process.platform !== "win32" || !value || /\.(cmd|exe|bat)$/i.test(value)) {
-    return value;
-  }
-
-  if (path.isAbsolute(value) || value.startsWith(".") || value.includes("/") || value.includes("\\")) {
-    return `${value}.cmd`;
-  }
-
-  return value;
-}
-
 function resolveBridgeCommand(value) {
-  return maybeWindowsCommandShim(resolveRepoPath(value));
+  return resolveRepoPath(value);
 }
 
 function bridgeCommandFromTemplate(template) {
@@ -602,8 +595,7 @@ async function bridgeDoctor() {
     return;
   }
   const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND
-    ? maybeWindowsCommandShim(process.env.LARK_CHANNEL_BRIDGE_COMMAND)
-    : resolveBridgeCommand(bridgeConfig.bridgeCommand);
+    || resolveBridgeCommand(bridgeConfig.bridgeCommand);
   const result = spawnSync(bridgeCommand, ["--version"], {
     cwd: repoRoot,
     encoding: "utf8"
@@ -688,7 +680,7 @@ function normalizeBridgeInstallCommand(command) {
 }
 
 function larkChannelConfigFile() {
-  const home = process.env.HOME || process.env.USERPROFILE;
+  const home = process.env.HOME || os.homedir();
   return home ? path.join(home, ".lark-channel", "config.json") : "";
 }
 
@@ -807,8 +799,7 @@ async function bridgeInstall() {
     return;
   }
   const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND
-    ? maybeWindowsCommandShim(process.env.LARK_CHANNEL_BRIDGE_COMMAND)
-    : resolveBridgeCommand(bridgeConfig.bridgeCommand);
+    || resolveBridgeCommand(bridgeConfig.bridgeCommand);
   if (path.isAbsolute(bridgeCommand) && await exists(bridgeCommand)) {
     process.stdout.write(`OK bridge 已安装：${bridgeCommand}\n`);
     return;
@@ -842,8 +833,7 @@ async function runBridgeCommand(kind) {
     return;
   }
   const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND
-    ? maybeWindowsCommandShim(process.env.LARK_CHANNEL_BRIDGE_COMMAND)
-    : resolveBridgeCommand(bridgeConfig.bridgeCommand);
+    || resolveBridgeCommand(bridgeConfig.bridgeCommand);
   const { agentId: requestedAgentId, profile: requestedProfile } = parseBridgeTargetArgs(process.argv.slice(3));
   let requestedAgent;
   let targetProfile = bridgeConfig.profile;
