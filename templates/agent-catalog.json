@@ -37,6 +37,7 @@
     "rulesTemplate": "templates/agent-rules/investment-coach.md",
     "bridgeProfile": "investment-coach",
     "bridgeWorkspace": "agents/investment-coach/workspace",
+    "legacyBridgeWorkspaces": ["agent-workspaces/investment-coach"],
     "dataWorkspace": ".mo-life-pack/investment-coach",
     "bridgePrompt": "Use $investment-coach as {agentName} in a sharp-tongued, commanding style for evidence-first A-share and US stock research, ETF allocation, portfolio reviews, and trading discipline. Target excuses and broken logic, never the user's identity."
   }

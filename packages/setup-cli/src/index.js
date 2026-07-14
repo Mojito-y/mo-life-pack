@@ -641,6 +641,40 @@ function materializeBridgeArgs(args) {
   return args.map((arg) => arg === "." ? repoRoot : arg);
 }
 
+function parseBridgeTargetArgs(args) {
+  let agentId = "";
+  let profile = "";
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--profile") {
+      const value = args[index + 1]?.trim();
+      if (!value || value.startsWith("--")) {
+        throw new Error("--profile 需要一个 profile 名称。");
+      }
+      profile = value;
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith("--")) {
+      throw new Error(`未知参数：${arg}`);
+    }
+    if (agentId) {
+      throw new Error(`多余参数：${arg}`);
+    }
+    agentId = arg.trim();
+  }
+
+  if (profile && !agentId) {
+    throw new Error("使用 --profile 时必须先指定 agent id。");
+  }
+  if (profile && !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(profile)) {
+    throw new Error(`profile 名称不合法：${profile}`);
+  }
+
+  return { agentId, profile };
+}
+
 function normalizeBridgeInstallCommand(command) {
   if (!command) {
     return command;
@@ -658,7 +692,59 @@ function larkChannelConfigFile() {
   return home ? path.join(home, ".lark-channel", "config.json") : "";
 }
 
-async function ensureLarkChannelProfileUsesRules(profile) {
+function larkChannelSessionCatalogFile(profile) {
+  const configFile = larkChannelConfigFile();
+  if (!configFile || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(profile || "")) {
+    return "";
+  }
+  return path.join(path.dirname(configFile), "profiles", profile, "sessions.json.catalog.json");
+}
+
+async function migrateLarkChannelSessionCatalog(profile, workspace, legacyWorkspaces) {
+  const filePath = larkChannelSessionCatalogFile(profile);
+  if (!filePath || !workspace || !legacyWorkspaces.length || !(await exists(filePath))) {
+    return 0;
+  }
+
+  let catalog;
+  try {
+    catalog = await readJson(filePath);
+  } catch {
+    return 0;
+  }
+  if (!Array.isArray(catalog)) {
+    return 0;
+  }
+
+  const legacyPaths = new Set(legacyWorkspaces.map((value) => path.resolve(value)));
+  let migrated = 0;
+  const nextCatalog = catalog.map((entry) => {
+    if (!entry || typeof entry !== "object") {
+      return entry;
+    }
+    let changed = false;
+    const nextEntry = { ...entry };
+    for (const field of ["cwdRealpath", "cwd"]) {
+      if (typeof entry[field] === "string" && legacyPaths.has(path.resolve(entry[field]))) {
+        nextEntry[field] = workspace;
+        changed = true;
+      }
+    }
+    if (changed) {
+      migrated += 1;
+    }
+    return nextEntry;
+  });
+
+  if (migrated) {
+    const tempPath = `${filePath}.tmp-${process.pid}`;
+    await writeFile(tempPath, JSON.stringify(nextCatalog, null, 2) + "\n", { mode: 0o600 });
+    await rename(tempPath, filePath);
+  }
+  return migrated;
+}
+
+async function ensureLarkChannelProfileUsesRules(profile, workspace = "", legacyWorkspaces = []) {
   const filePath = larkChannelConfigFile();
   if (!profile || !filePath || !(await exists(filePath))) {
     return false;
@@ -682,6 +768,12 @@ async function ensureLarkChannelProfileUsesRules(profile) {
       ...config.profiles,
       [profile]: {
         ...profileConfig,
+        ...(workspace ? {
+          workspaces: {
+            ...(profileConfig.workspaces || {}),
+            default: workspace
+          }
+        } : {}),
         codex: {
           ...(profileConfig.codex || {}),
           inheritCodexHome: true,
@@ -696,6 +788,7 @@ async function ensureLarkChannelProfileUsesRules(profile) {
   const tempPath = `${filePath}.tmp-${process.pid}`;
   await writeFile(tempPath, JSON.stringify(nextConfig, null, 2) + "\n", { mode: 0o600 });
   await rename(tempPath, filePath);
+  await migrateLarkChannelSessionCatalog(profile, workspace, legacyWorkspaces);
   return true;
 }
 
@@ -751,8 +844,11 @@ async function runBridgeCommand(kind) {
   const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND
     ? maybeWindowsCommandShim(process.env.LARK_CHANNEL_BRIDGE_COMMAND)
     : resolveBridgeCommand(bridgeConfig.bridgeCommand);
-  const requestedAgentId = process.argv[3]?.trim();
+  const { agentId: requestedAgentId, profile: requestedProfile } = parseBridgeTargetArgs(process.argv.slice(3));
   let requestedAgent;
+  let targetProfile = bridgeConfig.profile;
+  let targetWorkspace = "";
+  let legacyWorkspaces = [];
   let argsByKind;
   if (requestedAgentId) {
     const catalog = await loadAgentCatalog();
@@ -760,8 +856,11 @@ async function runBridgeCommand(kind) {
     if (!requestedAgent) {
       throw new Error(`未知 agent/profile：${requestedAgentId}。可选：${catalog.map((agent) => agent.id).join(", ")}`);
     }
-    const profile = requestedAgent.bridgeProfile;
+    const profile = requestedProfile || requestedAgent.bridgeProfile;
     const workspace = resolveRepoPath(requestedAgent.bridgeWorkspace || ".");
+    targetProfile = profile;
+    targetWorkspace = workspace;
+    legacyWorkspaces = (requestedAgent.legacyBridgeWorkspaces || []).map(resolveRepoPath);
     argsByKind = {
       run: ["run", "--profile", profile, "--agent", bridgeConfig.agent || "codex", "--workspace", workspace],
       start: ["start", "--profile", profile, "--agent", bridgeConfig.agent || "codex", "--workspace", workspace],
@@ -777,17 +876,19 @@ async function runBridgeCommand(kind) {
     };
   }
   if (kind === "run" || kind === "start") {
-    await ensureLarkChannelProfileUsesRules(requestedAgent?.bridgeProfile || bridgeConfig.profile);
+    await ensureLarkChannelProfileUsesRules(targetProfile, targetWorkspace, legacyWorkspaces);
   }
   const args = materializeBridgeArgs(argsByKind[kind] || bridgeConfig.firstRunArgs);
   const result = spawnSync(bridgeCommand, args, {
     cwd: repoRoot,
     stdio: "inherit"
   });
-  const profileArgSuffix = requestedAgentId ? ` -- ${requestedAgentId}` : "";
+  const profileArgSuffix = requestedAgentId
+    ? ` -- ${requestedAgentId}${requestedProfile ? ` --profile ${requestedProfile}` : ""}`
+    : "";
   if (kind === "run") {
     if (requestedAgent?.bridgeWorkspace) {
-      process.stdout.write(`\n确认 bot 可用并停止前台进程后，先运行 ${runnerCommand} run agent:configure-profile -- ${requestedAgent.id} 启用专属规则。\n`);
+      process.stdout.write(`\n确认 bot 可用并停止前台进程后，先运行 ${runnerCommand} run agent:configure-profile -- ${requestedAgent.id}${requestedProfile ? ` --profile ${requestedProfile}` : ""} 启用专属规则。\n`);
       process.stdout.write(`再运行 ${runnerCommand} run bridge:start${profileArgSuffix} 后台常驻，并用 ${runnerCommand} run bridge:status${profileArgSuffix} 查看状态。\n`);
     } else {
       process.stdout.write(`\nbridge:run 是前台绑定/调试模式；确认 bot 可用后，可以运行 ${runnerCommand} run bridge:start${profileArgSuffix} 后台常驻，再用 ${runnerCommand} run bridge:status${profileArgSuffix} 查看状态。\n`);

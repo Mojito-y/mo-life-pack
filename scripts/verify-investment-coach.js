@@ -100,11 +100,26 @@ for (const requiredText of ["sharp-tongued", "Target excuses", "正常模式", "
 }
 
 const setupCli = await read("packages/setup-cli/src/index.js");
-if (!setupCli.includes("ensureLarkChannelProfileUsesRules(requestedAgent?.bridgeProfile || bridgeConfig.profile)")) {
-  throw new Error("named bridge 命令必须把 ignoreRules 应用到请求的 profile");
-}
 if (setupCli.includes("ensureLarkChannelProfileUsesRules(bridgeConfig)")) {
   throw new Error("named bridge 命令不能把 ignoreRules 固定应用到默认 bridge profile");
+}
+for (const requiredText of [
+  "parseBridgeTargetArgs",
+  "requestedProfile || requestedAgent.bridgeProfile",
+  "ensureLarkChannelProfileUsesRules(targetProfile, targetWorkspace, legacyWorkspaces)",
+  "cwdRealpath",
+  "legacyBridgeWorkspaces"
+]) {
+  if (!setupCli.includes(requiredText)) {
+    throw new Error(`named bridge 多实例迁移缺少：${requiredText}`);
+  }
+}
+
+const configureProfile = await read("scripts/configure-agent-profile.js");
+for (const requiredText of ["profileOverride", "sessions.json.catalog.json", "cwdRealpath", "legacyBridgeWorkspaces"]) {
+  if (!configureProfile.includes(requiredText)) {
+    throw new Error(`profile 配置迁移缺少：${requiredText}`);
+  }
 }
 
 const freshness = await read("skills/investment-coach/references/evidence-and-freshness.md");

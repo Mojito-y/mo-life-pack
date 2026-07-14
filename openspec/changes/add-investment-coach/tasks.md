@@ -9,6 +9,7 @@
 - [x] 2.1 新增非破坏性 agent:add
 - [x] 2.2 bridge 生命周期命令支持 agent id 参数
 - [x] 2.3 新增专属 workspace 和扫码后 profile 配置命令
+- [x] 2.4 支持 `--profile` 多实例并迁移旧 workspace 与会话 cwd
 
 ## 3. 安装与验证
 

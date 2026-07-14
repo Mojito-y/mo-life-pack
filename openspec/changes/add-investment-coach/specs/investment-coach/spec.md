@@ -44,3 +44,12 @@
 
 - **WHEN** 用户运行 named-profile bridge 命令并指定 investment-coach
 - **THEN** 系统 SHALL 使用 investment-coach profile 和专属 workspace，不影响 mo-coach profile
+
+### Requirement: 同一 Agent 多实例迁移
+
+系统 SHALL 支持通过 `--profile` 为同一 Agent 管理多个独立 profile，并在 workspace 目录升级时迁移目标 profile 的默认工作区和旧会话 cwd。
+
+#### Scenario: 第二个 Investment Coach 仍引用旧目录
+
+- **WHEN** 用户为 `investment-coach-2` 运行 profile 配置或 named-profile run/start 命令
+- **THEN** 系统 SHALL 只更新 `investment-coach-2`，将 `workspaces.default` 和匹配旧目录的 `cwdRealpath` 指向当前专属 workspace，不得误改主 profile

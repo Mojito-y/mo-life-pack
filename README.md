@@ -140,6 +140,20 @@ npm run bridge:status -- investment-coach
 
 `agent:configure-profile` 只修改指定 profile 的默认工作区和 Codex rules 开关，不启动服务，也不会输出或替换 App Secret。执行它时应保持该 profile 已停止。
 
+## 同一个 Agent 运行多个实例
+
+第二个 Investment Coach 使用独立 profile 名称，例如 `investment-coach-2`。首次绑定、配置和后续生命周期命令都同时指定 agent id 与 profile：
+
+```bash
+npm run bridge:run -- investment-coach --profile investment-coach-2
+npm run agent:configure-profile -- investment-coach --profile investment-coach-2
+npm run bridge:start -- investment-coach --profile investment-coach-2
+npm run bridge:status -- investment-coach --profile investment-coach-2
+npm run bridge:stop -- investment-coach --profile investment-coach-2
+```
+
+目录升级后如果旧实例提示 `工作目录不存在或不可访问`，先停止该实例，再运行对应的 `agent:configure-profile`。该命令会同时迁移 profile 默认工作区和旧会话的 `cwdRealpath`，然后再启动实例。前台 `bridge:run` 正在运行时请在原终端按 `Ctrl-C` 停止，不要直接改配置。
+
 ## Mo Coach 能做什么
 
 Mo Coach 支持：
