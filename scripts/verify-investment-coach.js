@@ -22,8 +22,8 @@ const requiredFiles = [
   "skills/investment-coach/references/output-templates.md",
   "skills/investment-coach/references/risk-boundaries.md",
   "skills/investment-coach/evals/evals.json",
-  "templates/investment-coach.config.example.json",
-  "agent-workspaces/investment-coach/AGENTS.md"
+  "agents/investment-coach/templates/investment-coach.config.example.json",
+  "agents/investment-coach/workspace/AGENTS.md"
 ];
 await Promise.all(requiredFiles.map(assertFile));
 
@@ -33,7 +33,7 @@ if (!agent || agent.bridgeProfile !== "investment-coach" || !agent.bridgeWorkspa
   throw new Error("agent catalog 缺少完整的 investment-coach profile 配置");
 }
 
-const config = JSON.parse(await read("templates/investment-coach.config.example.json"));
+const config = JSON.parse(await read("agents/investment-coach/templates/investment-coach.config.example.json"));
 if (!config.markets.includes("A_SHARE") || !config.markets.includes("US")) {
   throw new Error("投资教练必须同时覆盖 A 股和美股");
 }
@@ -92,11 +92,19 @@ for (const requiredId of [5, 6, 7, 8, 9, 10]) {
   }
 }
 
-const workspaceRules = await read("agent-workspaces/investment-coach/AGENTS.md");
+const workspaceRules = await read("agents/investment-coach/workspace/AGENTS.md");
 for (const requiredText of ["sharp-tongued", "Target excuses", "正常模式", "毒舌模式", "high-risk condition remains"]) {
   if (!workspaceRules.includes(requiredText)) {
     throw new Error(`Investment Coach workspace rules 缺少人设规则：${requiredText}`);
   }
+}
+
+const setupCli = await read("packages/setup-cli/src/index.js");
+if (!setupCli.includes("ensureLarkChannelProfileUsesRules(requestedAgent?.bridgeProfile || bridgeConfig.profile)")) {
+  throw new Error("named bridge 命令必须把 ignoreRules 应用到请求的 profile");
+}
+if (setupCli.includes("ensureLarkChannelProfileUsesRules(bridgeConfig)")) {
+  throw new Error("named bridge 命令不能把 ignoreRules 固定应用到默认 bridge profile");
 }
 
 const freshness = await read("skills/investment-coach/references/evidence-and-freshness.md");

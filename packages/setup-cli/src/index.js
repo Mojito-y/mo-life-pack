@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFile, writeFile, access, mkdir } from "node:fs/promises";
+import { readFile, writeFile, access, mkdir, rename } from "node:fs/promises";
 import { constants } from "node:fs";
 import { spawnSync } from "node:child_process";
 import os from "node:os";
@@ -18,7 +18,7 @@ const agentConfigTemplatePath = path.join(repoRoot, "templates", "agent.config.e
 const bridgeTemplatePath = path.join(repoRoot, "templates", "lark-agent-bridge.config.example.json");
 const envTemplatePath = path.join(repoRoot, "templates", "env.example");
 const skillInstallScript = path.join(repoRoot, "scripts", "install-skill.js");
-const runnerCommand = "npm";
+const runnerCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const macCodexAppBinaryCandidates = [
   "/Applications/ChatGPT.app/Contents/Resources/codex",
   "/Applications/Codex.app/Contents/Resources/codex"
@@ -27,16 +27,6 @@ const macCodexAppBinary = macCodexAppBinaryCandidates[0];
 const minimumBridgeNodeMajor = 22;
 const agentRulesStart = "<!-- mo-life-pack-agent-rules:start -->";
 const agentRulesEnd = "<!-- mo-life-pack-agent-rules:end -->";
-
-function ensureSupportedPlatform() {
-  if (process.platform !== "win32") {
-    return;
-  }
-
-  process.stdout.write("Mo Life Pack 当前只支持 macOS / Linux，不再支持 Windows 原生环境。\n");
-  process.stdout.write("请在 macOS、Linux 机器或 Linux 服务器上安装运行。\n");
-  process.exit(1);
-}
 
 async function exists(filePath) {
   try {
@@ -74,7 +64,8 @@ async function codexBinaryUsable(value) {
 }
 
 function findCommandPath(command) {
-  const result = spawnSync("which", [command], {
+  const lookupCommand = process.platform === "win32" ? "where" : "which";
+  const result = spawnSync(lookupCommand, [command], {
     cwd: repoRoot,
     encoding: "utf8",
     timeout: 5000
@@ -119,7 +110,8 @@ function ensureBridgeNodeRuntime() {
 
   process.stdout.write(`当前 Node.js 版本是 ${process.version}，低于 lark-channel-bridge 需要的 Node.js ${minimumBridgeNodeMajor}+。\n`);
   process.stdout.write("请先安装或切换到 Node.js 22 LTS 或更新版本，然后重新运行当前命令。\n");
-  process.stdout.write("常见做法：nvm install 22 && nvm use 22\n");
+  process.stdout.write("macOS 常见做法：nvm install 22 && nvm use 22\n");
+  process.stdout.write("请安装 Node.js LTS：https://nodejs.org/\n");
   process.exitCode = 1;
   return false;
 }
@@ -223,8 +215,20 @@ function resolveRepoPath(value) {
   return path.join(repoRoot, value);
 }
 
+function maybeWindowsCommandShim(value) {
+  if (process.platform !== "win32" || !value || /\.(cmd|exe|bat)$/i.test(value)) {
+    return value;
+  }
+
+  if (path.isAbsolute(value) || value.startsWith(".") || value.includes("/") || value.includes("\\")) {
+    return `${value}.cmd`;
+  }
+
+  return value;
+}
+
 function resolveBridgeCommand(value) {
-  return resolveRepoPath(value);
+  return maybeWindowsCommandShim(resolveRepoPath(value));
 }
 
 function bridgeCommandFromTemplate(template) {
@@ -598,7 +602,7 @@ async function bridgeDoctor() {
     return;
   }
   const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND
-    ? process.env.LARK_CHANNEL_BRIDGE_COMMAND
+    ? maybeWindowsCommandShim(process.env.LARK_CHANNEL_BRIDGE_COMMAND)
     : resolveBridgeCommand(bridgeConfig.bridgeCommand);
   const result = spawnSync(bridgeCommand, ["--version"], {
     cwd: repoRoot,
@@ -650,12 +654,11 @@ function normalizeBridgeInstallCommand(command) {
 }
 
 function larkChannelConfigFile() {
-  const home = process.env.HOME;
+  const home = process.env.HOME || process.env.USERPROFILE;
   return home ? path.join(home, ".lark-channel", "config.json") : "";
 }
 
-async function ensureLarkChannelProfileUsesRules(bridgeConfig) {
-  const profile = bridgeConfig.profile;
+async function ensureLarkChannelProfileUsesRules(profile) {
   const filePath = larkChannelConfigFile();
   if (!profile || !filePath || !(await exists(filePath))) {
     return false;
@@ -673,18 +676,26 @@ async function ensureLarkChannelProfileUsesRules(bridgeConfig) {
     return false;
   }
 
-  profileConfig.codex = {
-    ...(profileConfig.codex || {}),
-    inheritCodexHome: true,
-    ignoreUserConfig: false,
-    ignoreRules: false
+  const nextConfig = {
+    ...config,
+    profiles: {
+      ...config.profiles,
+      [profile]: {
+        ...profileConfig,
+        codex: {
+          ...(profileConfig.codex || {}),
+          inheritCodexHome: true,
+          ignoreUserConfig: false,
+          ignoreRules: false,
+          ...(process.env.LARK_CHANNEL_CODEX_BIN ? { binaryPath: process.env.LARK_CHANNEL_CODEX_BIN } : {})
+        }
+      }
+    }
   };
 
-  if (process.env.LARK_CHANNEL_CODEX_BIN) {
-    profileConfig.codex.binaryPath = process.env.LARK_CHANNEL_CODEX_BIN;
-  }
-
-  await writeFile(filePath, JSON.stringify(config, null, 2) + "\n");
+  const tempPath = `${filePath}.tmp-${process.pid}`;
+  await writeFile(tempPath, JSON.stringify(nextConfig, null, 2) + "\n", { mode: 0o600 });
+  await rename(tempPath, filePath);
   return true;
 }
 
@@ -703,7 +714,7 @@ async function bridgeInstall() {
     return;
   }
   const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND
-    ? process.env.LARK_CHANNEL_BRIDGE_COMMAND
+    ? maybeWindowsCommandShim(process.env.LARK_CHANNEL_BRIDGE_COMMAND)
     : resolveBridgeCommand(bridgeConfig.bridgeCommand);
   if (path.isAbsolute(bridgeCommand) && await exists(bridgeCommand)) {
     process.stdout.write(`OK bridge 已安装：${bridgeCommand}\n`);
@@ -737,11 +748,8 @@ async function runBridgeCommand(kind) {
   if (!ensureBridgeNodeRuntime()) {
     return;
   }
-  if (kind === "run" || kind === "start") {
-    await ensureLarkChannelProfileUsesRules(bridgeConfig);
-  }
   const bridgeCommand = process.env.LARK_CHANNEL_BRIDGE_COMMAND
-    ? process.env.LARK_CHANNEL_BRIDGE_COMMAND
+    ? maybeWindowsCommandShim(process.env.LARK_CHANNEL_BRIDGE_COMMAND)
     : resolveBridgeCommand(bridgeConfig.bridgeCommand);
   const requestedAgentId = process.argv[3]?.trim();
   let requestedAgent;
@@ -768,6 +776,9 @@ async function runBridgeCommand(kind) {
       stop: bridgeConfig.stopArgs || ["stop", "--profile", bridgeConfig.profile || "mo-coach"]
     };
   }
+  if (kind === "run" || kind === "start") {
+    await ensureLarkChannelProfileUsesRules(requestedAgent?.bridgeProfile || bridgeConfig.profile);
+  }
   const args = materializeBridgeArgs(argsByKind[kind] || bridgeConfig.firstRunArgs);
   const result = spawnSync(bridgeCommand, args, {
     cwd: repoRoot,
@@ -788,7 +799,6 @@ async function runBridgeCommand(kind) {
 }
 
 const command = process.argv[2];
-ensureSupportedPlatform();
 
 if (command === "setup") {
   await setup();
