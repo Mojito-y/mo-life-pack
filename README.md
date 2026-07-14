@@ -1,6 +1,6 @@
 # Mo Life Pack
 
-一个可以直接安装的「AI in daily life」工具包，通过 `lark-channel-bridge` 接入飞书 / Lark PersonalAgent。安装第一步会选择要启用的 agent。
+一个可以直接安装的「AI in daily life」工具包，通过 `lark-channel-bridge` 接入飞书 / Lark PersonalAgent，也可以通过 WeClaw 把现有 Investment Coach 接到微信。安装第一步会选择要启用的 agent。
 
 当前内置：
 
@@ -153,6 +153,33 @@ npm run bridge:stop -- investment-coach --profile investment-coach-2
 ```
 
 目录升级后如果旧实例提示 `工作目录不存在或不可访问`，先停止该实例，再运行对应的 `agent:configure-profile`。该命令会同时迁移 profile 默认工作区和旧会话的 `cwdRealpath`，然后再启动实例。前台 `bridge:run` 正在运行时请在原终端按 `Ctrl-C` 停止，不要直接改配置。
+
+## 微信 ClawBot：复用 Investment Coach 与 Codex
+
+微信通道使用 [WeClaw](https://github.com/fastclaw-ai/weclaw) `v0.7.1`，不需要新的模型 API Key，直接复用本机 Codex CLI 的登录态、默认模型以及 `agents/investment-coach/workspace/AGENTS.md` 人设。先安装并生成配置：
+
+```bash
+npm run wechat:install
+npm run wechat:configure
+npm run wechat:doctor
+```
+
+上述三条命令不会扫码、不会启动微信监听。首次绑定由用户手动执行：
+
+```bash
+npm run wechat:login
+npm run wechat:run
+```
+
+`wechat:run` 是前台调试模式，按 `Ctrl-C` 退出。确认消息正常后再手动切到后台：
+
+```bash
+npm run wechat:start
+npm run wechat:status
+npm run wechat:stop
+```
+
+配置会合并写入 `~/.weclaw/config.json`，保留其中已有的其他 agent，并新增默认 agent `investment-coach`；微信里也可以用 `/invest` 或 `/coach` 切换回来。WeClaw 的 Codex app-server 原始实现会请求全磁盘写权限，本项目通过 `agents/investment-coach/bin/codex` 安全代理强制改为只读、固定工作目录、禁止 shell 网络，并保留同一微信会话内的多轮上下文。微信消息和附件一律按不可信输入处理；这个绑定只适合私人账号，不要暴露给陌生人或公开群聊。
 
 ## Mo Coach 能做什么
 

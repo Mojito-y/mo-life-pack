@@ -27,12 +27,21 @@
     "bridge:start": "node packages/setup-cli/src/index.js bridge-start",
     "bridge:status": "node packages/setup-cli/src/index.js bridge-status",
     "bridge:stop": "node packages/setup-cli/src/index.js bridge-stop",
+    "wechat:install": "node scripts/wechat-channel.js install",
+    "wechat:configure": "node scripts/wechat-channel.js configure",
+    "wechat:doctor": "node scripts/wechat-channel.js doctor",
+    "wechat:login": "node scripts/wechat-channel.js login",
+    "wechat:run": "node scripts/wechat-channel.js run",
+    "wechat:start": "node scripts/wechat-channel.js start",
+    "wechat:status": "node scripts/wechat-channel.js status",
+    "wechat:stop": "node scripts/wechat-channel.js stop",
     "dev:lark": "node apps/lark-bot/src/index.js",
     "plan:coach": "node packages/mo-coach-core/src/plan.js",
     "dd:screen": "node packages/industry-dd-core/src/screen.js",
     "dd:profile": "node packages/industry-dd-core/src/profile.js",
     "verify:agents": "node scripts/verify-agent-selection.js",
     "verify:industry-dd": "node scripts/verify-industry-dd.js",
-    "verify:investment-coach": "node scripts/verify-investment-coach.js"
+    "verify:investment-coach": "node scripts/verify-investment-coach.js",
+    "verify:wechat": "node scripts/verify-wechat-channel.js"
   }
 }
