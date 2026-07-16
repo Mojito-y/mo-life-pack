@@ -65,6 +65,11 @@ async function main() {
   await mkdir(targetRoot, { recursive: true });
   await cp(source, target, { recursive: true, force: true });
   process.stdout.write(`Installed ${agent.displayName} skill to ${target}\n`);
+  if (agent.skillDependencies?.skills?.length) {
+    process.stdout.write(`${agent.displayName} 还依赖 ${agent.skillDependencies.skills.length} 个数据 Skill。\n`);
+    process.stdout.write(`检查状态：npm run agent:skills -- ${agent.id}\n`);
+    process.stdout.write(`安装缺失项：npm run agent:skills -- ${agent.id} --install\n`);
+  }
 }
 
 main().catch((error) => {

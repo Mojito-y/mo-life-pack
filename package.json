@@ -19,6 +19,7 @@
     "setup": "node packages/setup-cli/src/index.js setup",
     "doctor": "node packages/setup-cli/src/index.js doctor",
     "install:skill": "node scripts/install-skill.js",
+    "agent:skills": "node scripts/manage-agent-skills.js",
     "agent:add": "node scripts/add-agent.js",
     "agent:configure-profile": "node scripts/configure-agent-profile.js",
     "bridge:install": "node packages/setup-cli/src/index.js bridge-install",

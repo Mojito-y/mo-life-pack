@@ -142,6 +142,40 @@ npm run bridge:status -- investment-coach
 
 `agent:configure-profile` 只修改指定 profile 的默认工作区和 Codex rules 开关，不启动服务，也不会输出或替换 App Secret。执行它时应保持该 profile 已停止。
 
+## 安装 Investment Coach 的问财数据 Skill
+
+Investment Coach 的行情、公告、新闻、研报和行业数据依赖以下 5 个同花顺问财 SkillHub Skill：
+
+- `hithink-market-query`
+- `announcement-search`
+- `news-search`
+- `report-search`
+- `hithink-industry-query`
+
+先同步 Investment Coach 主 Skill，再安装缺失的数据 Skill：
+
+```bash
+npm run install:skill -- --agent investment-coach
+npm run agent:skills -- investment-coach --install
+```
+
+脚本会检查 5 个 Skill；如果缺少 `iwencai-skillhub-cli`，会打印同花顺官方 CLI 安装命令。
+
+Token 获取位置：打开 [同花顺问财 SkillHub](https://www.iwencai.com/skillhub)，进入上述任一 Skill 的详情页，找到「安装方式」→「Agent 用户」，按页面提示把以下变量写入 shell profile：
+
+```bash
+IWENCAI_BASE_URL=https://openapi.iwencai.com
+IWENCAI_API_KEY=<SkillHub 页面提供的 Token>
+```
+
+重新打开终端后检查：
+
+```bash
+npm run agent:skills -- investment-coach --check
+```
+
+不要把 Token 提交到仓库或发到截图中；已经暴露的 Token 应先在 SkillHub 轮换。
+
 ## 同一个 Agent 运行多个实例
 
 第二个 Investment Coach 使用独立 profile 名称，例如 `investment-coach-2`。首次绑定、配置和后续生命周期命令都同时指定 agent id 与 profile：
