@@ -47,6 +47,13 @@ const dataWorkspace = agent.dataWorkspace
   ? resolveRepoPath(agent.dataWorkspace)
   : null;
 
+function printSkillDependencyGuide() {
+  if (!agent.skillDependencies?.skills?.length) return;
+  process.stdout.write(`${agent.displayName} 还依赖 ${agent.skillDependencies.skills.length} 个数据 Skill。\n`);
+  process.stdout.write(`检查状态：npm run agent:skills -- ${agent.id}\n`);
+  process.stdout.write(`安装缺失项：npm run agent:skills -- ${agent.id} --install\n`);
+}
+
 for (const requiredPath of [path.join(skillSource, "SKILL.md"), configTemplate]) {
   if (!(await exists(requiredPath))) {
     throw new Error(`缺少文件：${path.relative(repoRoot, requiredPath)}`);
@@ -57,6 +64,7 @@ if (dryRun) {
   process.stdout.write(`DRY RUN 将累加安装 ${agent.displayName}，不会切换或覆盖当前 bridge profile。\n`);
   process.stdout.write(`Skill: ${skillSource} -> ${skillTarget}\n`);
   process.stdout.write(`Config: ${configTemplate} -> ${configOutput}（已存在则保留）\n`);
+  printSkillDependencyGuide();
   process.stdout.write(`下一步手动扫码：npm run bridge:run -- ${agent.id}\n`);
   process.exit(0);
 }
@@ -89,4 +97,5 @@ await writeFile(agentConfigPath, JSON.stringify({
 
 process.stdout.write(`已累加安装 ${agent.displayName}，当前 selectedAgent 保持为 ${selectedAgent}。\n`);
 process.stdout.write(`未启动 bridge，也未改写 lark-agent-bridge.config.json。\n`);
+printSkillDependencyGuide();
 process.stdout.write(`下一步手动扫码：npm run bridge:run -- ${agent.id}\n`);

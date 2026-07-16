@@ -39,6 +39,35 @@
     "bridgeWorkspace": "agents/investment-coach/workspace",
     "legacyBridgeWorkspaces": ["agent-workspaces/investment-coach"],
     "dataWorkspace": ".mo-life-pack/investment-coach",
+    "skillDependencies": {
+      "provider": "同花顺问财 SkillHub",
+      "cliCommand": "iwencai-skillhub-cli",
+      "installerUrl": "https://www.iwencai.com/skillhub/static/0.0.4/download_and_install.sh",
+      "tokenEnv": "IWENCAI_API_KEY",
+      "tokenHelpUrl": "https://www.iwencai.com/skillhub",
+      "skills": [
+        {
+          "id": "hithink-market-query",
+          "purpose": "股票、ETF、指数行情与技术指标"
+        },
+        {
+          "id": "announcement-search",
+          "purpose": "公司、基金与 ETF 公告"
+        },
+        {
+          "id": "news-search",
+          "purpose": "财经新闻、政策与公司动态"
+        },
+        {
+          "id": "report-search",
+          "purpose": "券商与机构研究报告"
+        },
+        {
+          "id": "hithink-industry-query",
+          "purpose": "行业估值、财务、行情与排名"
+        }
+      ]
+    },
     "bridgePrompt": "Use $investment-coach as {agentName} in a sharp-tongued, commanding style for evidence-first A-share and US stock research, ETF allocation, portfolio reviews, and trading discipline. Target excuses and broken logic, never the user's identity."
   }
 ]
