@@ -128,6 +128,8 @@ npm run agent:add -- investment-coach
 npm run bridge:run -- investment-coach
 ```
 
+`agent:add` 只累加安装，不切换已有默认 agent。如果本地还没有 `agent.config.json`，它会从现有 `lark-agent-bridge.config.json` 的 profile 恢复默认 agent；只有两份配置都不存在时，才会把新增 agent 设为默认。
+
 第二条命令会为 `investment-coach` 创建独立 profile，并显示二维码。请绑定另一个 PersonalAgent；不同 profile 不要复用同一个 App ID。
 
 确认前台能连接后，按 `Ctrl-C` 停止。再启用该 profile 的专属规则并后台启动：

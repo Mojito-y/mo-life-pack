@@ -43,6 +43,7 @@ const skillTarget = path.join(os.homedir(), ".codex", "skills", agent.id);
 const configTemplate = resolveRepoPath(agent.configTemplate);
 const configOutput = resolveRepoPath(agent.configOutput);
 const agentConfigPath = path.join(repoRoot, "agent.config.json");
+const bridgeConfigPath = path.join(repoRoot, "lark-agent-bridge.config.json");
 const dataWorkspace = agent.dataWorkspace
   ? resolveRepoPath(agent.dataWorkspace)
   : null;
@@ -61,6 +62,33 @@ if (dryRun) {
   process.exit(0);
 }
 
+const agentConfigExists = await exists(agentConfigPath);
+const currentAgentConfig = agentConfigExists ? await readJson(agentConfigPath) : {};
+let selectedAgent = currentAgentConfig.selectedAgent?.trim();
+let selectedAgentMessage = "";
+
+if (selectedAgent) {
+  selectedAgentMessage = `默认 agent 保持不变：${selectedAgent}。`;
+} else if (await exists(bridgeConfigPath)) {
+  const bridgeConfig = await readJson(bridgeConfigPath);
+  const bridgeProfile = bridgeConfig.profile?.trim();
+  const inferredAgent = catalog.find((item) => (
+    item.id === bridgeProfile || item.bridgeProfile === bridgeProfile
+  ));
+  if (!inferredAgent) {
+    throw new Error(
+      `无法从 lark-agent-bridge.config.json 的 profile=${bridgeProfile || "<empty>"} 推断默认 agent；请先修正 bridge profile 或补全 agent.config.json。`
+    );
+  }
+  selectedAgent = inferredAgent.id;
+  selectedAgentMessage = `已从 bridge profile ${bridgeProfile} 恢复默认 agent：${selectedAgent}。`;
+} else if (agentConfigExists) {
+  throw new Error("agent.config.json 缺少 selectedAgent；请先补全默认 agent，再执行累加安装。");
+} else {
+  selectedAgent = agent.id;
+  selectedAgentMessage = `未找到已有默认 agent，已将 ${selectedAgent} 设为默认 agent。`;
+}
+
 await mkdir(path.dirname(skillTarget), { recursive: true });
 await cp(skillSource, skillTarget, { recursive: true, force: true });
 
@@ -72,10 +100,6 @@ if (dataWorkspace) {
   await mkdir(dataWorkspace, { recursive: true });
 }
 
-const currentAgentConfig = await exists(agentConfigPath)
-  ? await readJson(agentConfigPath)
-  : {};
-const selectedAgent = currentAgentConfig.selectedAgent || agent.id;
 const installedAgents = [...new Set([
   selectedAgent,
   ...(currentAgentConfig.installedAgents || []),
@@ -87,6 +111,7 @@ await writeFile(agentConfigPath, JSON.stringify({
   installedAgents
 }, null, 2) + "\n");
 
-process.stdout.write(`已累加安装 ${agent.displayName}，当前 selectedAgent 保持为 ${selectedAgent}。\n`);
+process.stdout.write(`已安装并登记新 agent：${agent.displayName}（${agent.id}）。\n`);
+process.stdout.write(`${selectedAgentMessage}\n`);
 process.stdout.write(`未启动 bridge，也未改写 lark-agent-bridge.config.json。\n`);
 process.stdout.write(`下一步手动扫码：npm run bridge:run -- ${agent.id}\n`);
